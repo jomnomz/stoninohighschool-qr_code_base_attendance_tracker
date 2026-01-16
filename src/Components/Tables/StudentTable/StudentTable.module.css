@@ -357,7 +357,7 @@ tbody tr {
   background-color: #ffebee;
 }
 
-/* Column widths using percentages for 10 columns */
+/* Column widths using percentages for 9 columns */
 .tableWrapper table th:nth-child(1),
 .tableWrapper table td:nth-child(1) {
   width: 5%;
@@ -366,38 +366,38 @@ tbody tr {
 
 .tableWrapper table th:nth-child(2),
 .tableWrapper table td:nth-child(2) {
-  width: 10%;
+  width: 12%;
   min-width: 100px;
 }
 
 .tableWrapper table th:nth-child(3),
 .tableWrapper table td:nth-child(3) {
-  width: 12%;
+  width: 15%;
   min-width: 120px;
 }
 
 .tableWrapper table th:nth-child(4),
 .tableWrapper table td:nth-child(4) {
-  width: 12%;
+  width: 15%;
   min-width: 120px;
 }
 
 .tableWrapper table th:nth-child(5),
 .tableWrapper table td:nth-child(5) {
-  width: 12%;
-  min-width: 120px;
+  width: 10%;
+  min-width: 80px;
 }
 
 .tableWrapper table th:nth-child(6),
 .tableWrapper table td:nth-child(6) {
-  width: 8%;
-  min-width: 80px;
+  width: 12%;
+  min-width: 110px;
 }
 
 .tableWrapper table th:nth-child(7),
 .tableWrapper table td:nth-child(7) {
-  width: 12%;
-  min-width: 110px;
+  width: 8%;
+  min-width: 70px;
 }
 
 .tableWrapper table th:nth-child(8),
@@ -408,12 +408,6 @@ tbody tr {
 
 .tableWrapper table th:nth-child(9),
 .tableWrapper table td:nth-child(9) {
-  width: 8%;
-  min-width: 70px;
-}
-
-.tableWrapper table th:nth-child(10),
-.tableWrapper table td:nth-child(10) {
   width: 8%;
   min-width: 70px;
 }
@@ -439,16 +433,14 @@ tbody tr {
   .tableWrapper table th:nth-child(3),
   .tableWrapper table td:nth-child(3),
   .tableWrapper table th:nth-child(4),
-  .tableWrapper table td:nth-child(4),
-  .tableWrapper table th:nth-child(5),
-  .tableWrapper table td:nth-child(5) {
-    width: 11%;
+  .tableWrapper table td:nth-child(4) {
+    width: 14%;
     min-width: 100px;
   }
   
-  .tableWrapper table th:nth-child(7),
-  .tableWrapper table td:nth-child(7) {
-    width: 10%;
+  .tableWrapper table th:nth-child(6),
+  .tableWrapper table td:nth-child(6) {
+    width: 11%;
     min-width: 100px;
   }
 }

@@ -90,7 +90,7 @@ const findGradeAndSectionIds = async (gradeText, sectionText) => {
     // Find the grade
     const { data: gradeData, error: gradeError } = await supabase
       .from('grades')
-      .select('id')
+      .select('id, grade_level')
       .eq('grade_level', gradeLevel)
       .single();
 
@@ -99,11 +99,12 @@ const findGradeAndSectionIds = async (gradeText, sectionText) => {
     }
 
     const gradeId = gradeData.id;
+    const gradeDisplay = gradeData.grade_level; // e.g., "7" or "Grade 7"
 
     // Find the section for this grade
     const { data: sectionData, error: sectionError } = await supabase
       .from('sections')
-      .select('id')
+      .select('id, section_name')
       .eq('grade_id', gradeId)
       .eq('section_name', sectionText.toString().trim())
       .single();
@@ -113,8 +114,15 @@ const findGradeAndSectionIds = async (gradeText, sectionText) => {
     }
 
     const sectionId = sectionData.id;
+    const sectionDisplay = sectionData.section_name;
 
-    return { gradeId, sectionId, error: null };
+    return { 
+      gradeId, 
+      sectionId, 
+      gradeDisplay, // Return the grade text
+      sectionDisplay, // Return the section text
+      error: null 
+    };
   } catch (error) {
     return { error: `Error finding grade/section: ${error.message}` };
   }
@@ -314,7 +322,10 @@ router.post('/upload', excelUpload.single('file'), async (req, res) => {
         studentsWithIds.push({
           ...student,
           grade_id: result.gradeId,
-          section_id: result.sectionId
+          section_id: result.sectionId,
+          // Keep original grade/section text values for display
+          grade: result.gradeDisplay || student.grade,
+          section: result.sectionDisplay || student.section
         });
       }
     }
@@ -359,13 +370,9 @@ router.post('/upload', excelUpload.single('file'), async (req, res) => {
       }
     }
 
-    // Prepare final student data for insertion (remove grade/section text, keep IDs)
+    // Prepare final student data for insertion - KEEP BOTH TEXT AND ID FIELDS
     const newStudents = studentsWithIds
-      .filter(student => !existingLRNs.includes(student.lrn))
-      .map(student => {
-        const { grade, section, ...rest } = student; // Remove grade/section text fields
-        return rest;
-      });
+      .filter(student => !existingLRNs.includes(student.lrn));
 
     const existingStudents = studentsWithIds.filter(student => existingLRNs.includes(student.lrn));
 

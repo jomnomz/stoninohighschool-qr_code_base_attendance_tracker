@@ -339,9 +339,9 @@ export class StudentService extends EntityService {
     // Transform data to include proper grade and section names
     const transformedData = (data || []).map(student => ({
       ...student,
-      // Use grade from grades table if available, otherwise fall back
+      // Use grade from grades table if available, otherwise use text field or fallback
       grade: student.grade_info?.grade_level || student.grade || 'N/A',
-      // Use section from sections table if available, otherwise fall back
+      // Use section from sections table if available, otherwise use text field or fallback
       section: student.section_info?.section_name || student.section || 'N/A',
       // Keep original IDs
       grade_id: student.grade_id,
@@ -386,9 +386,9 @@ export class StudentService extends EntityService {
     // Transform data to include proper grade and section names
     const transformedData = (data || []).map(student => ({
       ...student,
-      // Use grade from grades table if available, otherwise fall back
+      // Use grade from grades table if available, otherwise use text field or fallback
       grade: student.grade_info?.grade_level || student.grade || 'N/A',
-      // Use section from sections table if available, otherwise fall back
+      // Use section from sections table if available, otherwise use text field or fallback
       section: student.section_info?.section_name || student.section || 'N/A',
       // Keep original IDs
       grade_id: student.grade_id,

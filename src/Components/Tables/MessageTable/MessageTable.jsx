@@ -12,9 +12,9 @@ const MessageTable = () => {
   useEffect(() => {
     const mockMessage = [
       {
-        recipient: 'Maria Aportedera (09109876352)',
-        message: 'JJ Aportedera entered the school at 7:41:13 am',
-        date_time: '05/30/2025 7:41:17',
+        recipient: 'Christian Quijote (09109876352)',
+        message: 'Flord Quijote entered the school at 7:41:13 am',
+        date_time: '01/15/2026 7:41:17',
       }
     ];
     setMessages(mockMessage);
@@ -34,7 +34,7 @@ const MessageTable = () => {
     }
   };
 
-  const grades = ['7', '8', '9', '10', '11', '12'];
+  const grades = ['7', '8', '9', '10'];
 
   return (
     <div className={styles.messageTableContainer}>

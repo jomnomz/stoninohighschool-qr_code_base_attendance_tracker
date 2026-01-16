@@ -5,19 +5,26 @@ import { grades } from '../../../Utils/tableHelpers';
 import { formatNA } from '../../../Utils/Formatters';
 import { sortGuardians } from '../../../Utils/SortEntities'; 
 import Button from '../../UI/Buttons/Button/Button';
-import Input from '../../UI/Input/Input';
+import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import styles from './GuardianTable.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from '../../../lib/supabase'; 
-import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 
-const GuardianTable = () => {
+const GuardianTable = ({
+  searchTerm = '',
+  selectedSection = '',
+  onSectionsUpdate,
+  onGradeUpdate,
+  onClearSectionFilter,
+  onSectionSelect,
+  availableSections = [],
+  // Props from parent
+  guardians: propGuardians = [],
+  loading: parentLoading = false
+}) => {
   const [guardians, setGuardians] = useState([]);
-  const [filteredGuardians, setFilteredGuardians] = useState([]);
-  const [currentGrade, setCurrentGrade] = useState('all');
-  const [currentSection, setCurrentSection] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentClass, setCurrentClass] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -31,73 +38,30 @@ const GuardianTable = () => {
     cancelEdit, 
     updateEditField, 
     saveEdit 
-  } = useEntityEdit(filteredGuardians, setFilteredGuardians, 'guardian');
+  } = useEntityEdit(guardians, setGuardians, 'guardian');
   const [localGuardians, setLocalGuardians] = useState([]);
 
-  // Fetch guardians from students table with proper joins
-  const fetchGuardians = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      let query = supabase
-        .from('students')
-        .select(`
-          id,
-          guardian_first_name,
-          guardian_middle_name,
-          guardian_last_name,
-          guardian_email,
-          guardian_phone_number,
-          first_name,
-          last_name,
-          middle_name,
-          lrn,
-          grade:grades(grade_level),
-          section:sections(section_name)
-        `)
-        .not('guardian_first_name', 'is', null)
-        .not('guardian_last_name', 'is', null);
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      // Transform data to guardian format
-      const transformedData = (data || []).map(student => ({
-        id: student.id,
-        first_name: student.guardian_first_name,
-        middle_name: student.guardian_middle_name,
-        last_name: student.guardian_last_name,
-        email: student.guardian_email,
-        phone_number: student.guardian_phone_number,
-        // Student information
-        guardian_of: `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim(),
-        student_lrn: student.lrn,
-        // Flatten grade and section
-        grade: student.grade?.grade_level || 'N/A',
-        section: student.section?.section_name || 'N/A',
-        // For filtering
-        full_name: `${student.guardian_first_name} ${student.guardian_middle_name || ''} ${student.guardian_last_name}`.trim().toLowerCase(),
-        student_full_name: `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim().toLowerCase()
-      })).filter(guardian => guardian.first_name && guardian.last_name);
-      
-      setGuardians(transformedData);
-      
-    } catch (err) {
-      console.error('Error fetching guardians:', err);
-      setError(err.message);
+  // Initialize guardians from parent props
+  useEffect(() => {
+    if (propGuardians && propGuardians.length > 0) {
+      console.log('📊 Initializing guardians from parent:', propGuardians.length);
+      setGuardians(propGuardians);
+      setLoading(false);
+    } else if (!parentLoading) {
       setGuardians([]);
-    } finally {
       setLoading(false);
     }
-  };
+  }, [propGuardians, parentLoading]);
 
-  // Initial fetch
+  // Update guardians when parent data changes
   useEffect(() => {
-    fetchGuardians();
-    
-    // Subscribe to student changes (since guardians are in students table)
+    if (propGuardians && propGuardians.length >= 0) {
+      setGuardians(propGuardians);
+    }
+  }, [propGuardians]);
+
+  // Subscribe to student changes (since guardians are in students table)
+  useEffect(() => {
     const subscription = supabase
       .channel('guardians-changes')
       .on(
@@ -108,7 +72,7 @@ const GuardianTable = () => {
           table: 'students'
         },
         () => {
-          fetchGuardians();
+          // Parent component will handle the refresh
         }
       )
       .subscribe();
@@ -128,73 +92,80 @@ const GuardianTable = () => {
     }
   }, [guardians]);
 
-  // Apply filters and search
-  useEffect(() => {
-    if (!localGuardians || localGuardians.length === 0) {
-      setFilteredGuardians([]);
-      return;
-    }
+  // Get unique sections from current guardians
+  const allUniqueSections = useMemo(() => {
+    const sections = localGuardians
+      .map(guardian => guardian.section || '')
+      .filter(section => section && section !== 'N/A' && section.trim() !== '');
+    
+    const uniqueSections = [...new Set(sections)];
+    return uniqueSections.sort();
+  }, [localGuardians]);
 
-    let result = [...localGuardians];
-
+  // Use sorted and filtered guardians for display
+  const sortedGuardians = useMemo(() => {
+    let filtered = localGuardians;
+    
     // Apply grade filter
-    if (currentGrade !== 'all') {
-      result = result.filter(guardian => guardian.grade === currentGrade);
+    if (currentClass !== 'all') {
+      filtered = filtered.filter(guardian => guardian.grade === currentClass);
     }
-
+    
     // Apply section filter
-    if (currentSection) {
-      result = result.filter(guardian => guardian.section === currentSection);
+    if (selectedSection) {
+      filtered = filtered.filter(guardian => guardian.section === selectedSection);
     }
-
-    // Apply search query
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(guardian => 
-        guardian.full_name.includes(query) ||
-        guardian.email?.toLowerCase().includes(query) ||
-        guardian.phone_number?.includes(query) ||
-        guardian.guardian_of.toLowerCase().includes(query) ||
-        guardian.student_lrn?.toLowerCase().includes(query)
+    
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(guardian => 
+        guardian.first_name?.toLowerCase().includes(searchLower) ||
+        guardian.last_name?.toLowerCase().includes(searchLower) ||
+        guardian.guardian_of?.toLowerCase().includes(searchLower) ||
+        guardian.student_lrn?.toLowerCase().includes(searchLower) ||
+        guardian.email?.toLowerCase().includes(searchLower) ||
+        guardian.phone_number?.toLowerCase().includes(searchLower) ||
+        guardian.grade?.toString().toLowerCase().includes(searchLower) ||
+        guardian.section?.toString().toLowerCase().includes(searchLower)
       );
     }
-
-    setFilteredGuardians(result);
-  }, [localGuardians, currentGrade, currentSection, searchQuery]);
-
-  // Get unique sections for the current grade
-  const availableSections = useMemo(() => {
-    if (!localGuardians || localGuardians.length === 0) return [];
     
-    let guardiansToFilter = [...localGuardians];
+    console.log(`🔍 Filtered guardians: ${filtered.length} (from ${localGuardians.length} total)`);
+    return filtered;
+  }, [localGuardians, currentClass, selectedSection, searchTerm]);
+
+  useEffect(() => {
+    if (onSectionsUpdate) {
+      onSectionsUpdate(allUniqueSections);
+    }
+  }, [allUniqueSections, onSectionsUpdate]);
+
+  useEffect(() => {
+    if (onGradeUpdate) {
+      onGradeUpdate(currentClass);
+    }
+  }, [currentClass, onGradeUpdate]);
+
+  const handleClassChange = (className) => {
+    setCurrentClass(className);
+    setLoading(true);
     
-    if (currentGrade !== 'all') {
-      guardiansToFilter = guardiansToFilter.filter(g => g.grade === currentGrade);
+    if (selectedSection && onSectionSelect) {
+      onSectionSelect('');
     }
     
-    const sections = guardiansToFilter
-      .map(g => g.section)
-      .filter(section => section && section !== 'N/A');
+    if (selectedSection && onClearSectionFilter) {
+      onClearSectionFilter();
+    }
     
-    return [...new Set(sections)].sort();
-  }, [localGuardians, currentGrade]);
-
-  const handleGradeChange = (grade) => {
-    setCurrentGrade(grade);
-    // Reset section filter when grade changes
-    setCurrentSection('');
+    setTimeout(() => setLoading(false), 100);
   };
 
-  const handleSectionChange = (section) => {
-    setCurrentSection(section);
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
+  const handleSectionFilter = (section) => {
+    if (onSectionSelect) {
+      onSectionSelect(section);
+    }
   };
 
   const handleEditClick = (guardian, e) => {
@@ -207,6 +178,7 @@ const GuardianTable = () => {
     
     const result = await saveEdit(
       guardianId, 
+      currentClass, 
       async (id, data) => {
         // Update guardian info in the student record
         const updateData = {
@@ -229,8 +201,7 @@ const GuardianTable = () => {
     );
     
     if (result.success) {
-      // Refresh guardians after update
-      fetchGuardians();
+      // The parent component will handle the refresh through the subscription
     }
   };
 
@@ -300,7 +271,7 @@ const GuardianTable = () => {
 
   const renderExpandedRow = (guardian) => (
     <tr className={`${styles.expandRow} ${isRowExpanded(guardian.id) ? styles.expandRowActive : ''}`}>
-      <td colSpan="8">
+      <td colSpan="7">
         <div 
           className={`${styles.guardianCard} ${styles.expandableCard}`}
           onClick={(e) => e.stopPropagation()}
@@ -350,7 +321,43 @@ const GuardianTable = () => {
     </div>
   );
 
-  if (loading) {
+  const getTableInfoMessage = () => {
+    const guardianCount = sortedGuardians.length;
+    
+    let message = '';
+    
+    if (selectedSection) {
+      message = `Showing ${guardianCount} guardian/s in Section ${selectedSection}`;
+      
+      if (currentClass === 'all') {
+        message += ' across all grades';
+      } else {
+        message += ` in Grade ${currentClass}`;
+      }
+      
+      if (searchTerm) {
+        message += ` matching "${searchTerm}"`;
+      }
+    } else if (searchTerm) {
+      message = `Found ${guardianCount} guardian/s matching "${searchTerm}"`;
+      
+      if (currentClass === 'all') {
+        message += ' across all grades';
+      } else {
+        message += ` in Grade ${currentClass}`;
+      }
+    } else {
+      if (currentClass === 'all') {
+        message = `Showing ${guardianCount} guardian/s across all grades`;
+      } else {
+        message = `Showing ${guardianCount} guardian/s in Grade ${currentClass}`;
+      }
+    }
+    
+    return message;
+  };
+
+  if (parentLoading || loading) {
     return (
       <div className={styles.guardianTableContainer}>
         <div className={styles.loading}>Loading guardians...</div>
@@ -369,26 +376,15 @@ const GuardianTable = () => {
   return (
     <div className={styles.guardianTableContainer} ref={tableRef}>
       <div className={styles.guardianTable}>
-        {/* Search Input - Positioned like students page */}
-        <div className={styles.searchContainer}>
-          <Input
-            placeholder="Search guardians by name, email, phone, or student details..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            search={true}
-          />
-        </div>
-
-        {/* Grade Filter Buttons */}
-        <div className={styles.gradeFilters}>
+        <div className={styles.classContainers}>
           <Button 
             label="All"
             tabBottom={true}
             height="xs"
             width="xs-sm"
             color="grades"
-            active={currentGrade === 'all'}
-            onClick={() => handleGradeChange('all')}
+            active={currentClass === 'all'}
+            onClick={() => handleClassChange('all')}
           >
             All
           </Button>
@@ -401,22 +397,16 @@ const GuardianTable = () => {
               height="xs"
               width="xs-sm"
               color="grades"
-              active={currentGrade === grade}
-              onClick={() => handleGradeChange(grade)}
+              active={currentClass === grade}
+              onClick={() => handleClassChange(grade)}
             >
               Grade {grade}
             </Button>
           ))}
-        </div>
 
-        {/* Table Info */}
-        <div className={styles.tableInfo}>
-          <p>
-            Showing {filteredGuardians.length} guardian/s 
-            {currentGrade !== 'all' && ` in Grade ${currentGrade}`}
-            {currentSection && `, Section ${currentSection}`}
-            {searchQuery && `, matching "${searchQuery}"`}
-          </p>
+          <div className={styles.tableInfo}>
+            <p>{getTableInfoMessage()}</p>
+          </div>
         </div>
 
         <div className={styles.tableWrapper}>
@@ -424,37 +414,35 @@ const GuardianTable = () => {
             <thead>
               <tr>
                 <th>FIRST NAME</th>
-                <th>MIDDLE NAME</th>
                 <th>LAST NAME</th>
                 <th>GUARDIAN OF</th>
+                <th>GRADE</th>
                 <th>
                   <div className={styles.sectionHeader}>
-                    <span>GRADE & SECTION</span>
-                    <SectionDropdown
-                      availableSections={availableSections}
-                      selectedValue={currentSection}
-                      onSelect={handleSectionChange}
-                      maxHeight={250}
-                    />
+                    <div className={styles.sectionHeaderRow}>
+                      <span>SECTION</span>
+                      <SectionDropdown 
+                        availableSections={allUniqueSections}
+                        selectedValue={selectedSection}
+                        onSelect={handleSectionFilter}
+                      />
+                    </div>
                   </div>
                 </th>
-                <th>EMAIL ADDRESS</th>
                 <th>PHONE NO.</th>
                 <th>EDIT</th>
               </tr>
             </thead>
             <tbody>
-              {filteredGuardians.length === 0 ? (
+              {sortedGuardians.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className={styles.noGuardians}>
-                    {searchQuery || currentGrade !== 'all' || currentSection
-                      ? 'No guardians found matching your filters'
-                      : 'No guardians found'}
+                  <td colSpan="7" className={styles.noGuardian}>
+                    {getTableInfoMessage()}
                   </td>
                 </tr>
               ) : (
-                filteredGuardians.map((guardian, index) => {
-                  const visibleRowIndex = filteredGuardians
+                sortedGuardians.map((guardian, index) => {
+                  const visibleRowIndex = sortedGuardians
                     .slice(0, index)
                     .filter(g => !isRowExpanded(g.id))
                     .length;
@@ -469,11 +457,10 @@ const GuardianTable = () => {
                           onClick={(e) => handleRowClick(guardian.id, e)}
                         >
                           <td>{renderEditField(guardian, 'first_name')}</td>
-                          <td>{renderEditField(guardian, 'middle_name')}</td>
                           <td>{renderEditField(guardian, 'last_name')}</td>
                           <td>{guardian.guardian_of}</td>
-                          <td>{guardian.grade} - {guardian.section}</td>
-                          <td>{renderEditField(guardian, 'email')}</td>
+                          <td>{guardian.grade}</td>
+                          <td>{guardian.section}</td>
                           <td>{renderEditField(guardian, 'phone_number')}</td>
                           <td>{renderEditCell(guardian)}</td>
                         </tr>

@@ -8,12 +8,11 @@ import StudentTable from '../../../Components/Tables/StudentTable/StudentTable.j
 import Input from '../../../Components/UI/Input/Input.jsx';
 import DeleteEntityModal from '../../../Components/Modals/DeleteEntityModal/DeleteEntityModal.jsx';
 import DownloadQRModal from '../../../Components/Modals/DownloadQRModal/DownloadQRModal.jsx';
-import SectionDropdown from '../../../Components/UI/Buttons/SectionDropdown/SectionDropdown.jsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faUsers, faTrash, faQrcode } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx';
 import { StudentService } from '../../../Utils/EntityService.js';
-import { supabase } from '../../../lib/supabase'; // Add supabase import
+import { supabase } from '../../../lib/supabase';
 
 function AdminStudents() {
   const { success, error: toastError } = useToast();
@@ -31,7 +30,6 @@ function AdminStudents() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   
-  // Add these new states
   const [gradesData, setGradesData] = useState([]);
   const [sectionsData, setSectionsData] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -77,70 +75,69 @@ function AdminStudents() {
     }
   }, [toastError]);
 
+  // Fetch all students from the database
   const fetchAllStudents = useCallback(async () => {
     try {
-      console.log('🔄 Fetching ALL students from all grades...');
+      console.log('🔄 Fetching ALL students from database...');
       const allStudentsData = await studentService.fetchAll();
       
-      // Transform student data to include proper grade and section names
-      const transformedStudents = allStudentsData.map(student => {
-        // Find grade name from gradesData using grade_id
-        const grade = gradesData.find(g => g.id === student.grade_id);
-        // Find section name from sectionsData using section_id
-        const section = sectionsData.find(s => s.id === student.section_id);
-        
-        return {
-          ...student,
-          // Use related table names if available, otherwise fall back to direct fields
-          grade: grade ? grade.grade_level : student.grade || 'N/A',
-          section: section ? section.section_name : student.section || 'N/A',
-          // Keep original IDs
-          grade_id: student.grade_id,
-          section_id: student.section_id
-        };
-      });
+      setAllStudents(allStudentsData);
+      console.log('✅ All students loaded:', allStudentsData.length);
       
-      setAllStudents(transformedStudents);
-      console.log('✅ All students loaded:', transformedStudents.length);
+      // Verify data integrity
+      if (allStudentsData.length > 0) {
+        console.log('📊 First student sample:', {
+          id: allStudentsData[0].id,
+          name: `${allStudentsData[0].first_name} ${allStudentsData[0].last_name}`,
+          grade: allStudentsData[0].grade,
+          section: allStudentsData[0].section,
+          grade_id: allStudentsData[0].grade_id,
+          section_id: allStudentsData[0].section_id
+        });
+      }
     } catch (err) {
       console.error('❌ Error loading all students:', err);
       toastError('Failed to load student data');
+      setAllStudents([]);
     }
-  }, [toastError, gradesData, sectionsData]);
+  }, [toastError]);
 
-  // Fetch initial data
+  // Fetch all data in sequence
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoadingData(true);
       try {
-        await Promise.all([
-          fetchGrades(),
-          fetchSections()
-        ]);
+        console.log('🚀 Starting data fetch sequence...');
+        
+        // 1. First fetch grades
+        await fetchGrades();
+        
+        // 2. Then fetch sections (depends on grades)
+        await fetchSections();
+        
+        // 3. Finally fetch students (depends on grades/sections for transformation)
+        await fetchAllStudents();
+        
+        console.log('✅ All data loaded successfully');
       } catch (err) {
-        console.error('Error fetching initial data:', err);
+        console.error('❌ Error fetching initial data:', err);
+        toastError('Failed to load application data');
       } finally {
         setLoadingData(false);
       }
     };
     
     fetchInitialData();
-  }, [fetchGrades, fetchSections]);
-
-  // Fetch students after grades and sections are loaded
-  useEffect(() => {
-    if (!loadingData && gradesData.length > 0) {
-      fetchAllStudents();
-    }
-  }, [loadingData, fetchAllStudents]);
+  }, [fetchGrades, fetchSections, fetchAllStudents]);
 
   const refreshStudents = useCallback(() => {
-    console.log('🔄 Refreshing student data...');
+    console.log('🔄 Manual refresh triggered');
+    fetchAllStudents();
     setRefreshTrigger(prev => prev + 1);
-  }, []);
+  }, [fetchAllStudents]);
 
-  const handleUploadSuccess = useCallback((newStudents) => {
-    console.log('🆕 Students uploaded, refreshing all data...', newStudents);
+  const handleUploadSuccess = useCallback(() => {
+    console.log('🆕 Students uploaded, refreshing...');
     fetchAllStudents();
     setRefreshTrigger(prev => prev + 1);
   }, [fetchAllStudents]);
@@ -165,8 +162,8 @@ function AdminStudents() {
     setSelectedStudents(selected);
   };
 
-  const handleStudentDataUpdate = (studentData) => {
-    console.log('Current grade students updated:', studentData.length);
+  const handleStudentDataUpdate = () => {
+    // This callback can be used for additional logic when student data updates
   };
 
   const handleGradeUpdate = (grade) => {
@@ -231,6 +228,7 @@ function AdminStudents() {
         success(`${studentIdOrIds.length} students deleted successfully`);
       }
       
+      // Refresh the data
       await fetchAllStudents();
       setRefreshTrigger(prev => prev + 1);
       
@@ -245,9 +243,7 @@ function AdminStudents() {
       setStudentToDelete(null);
       
       if (deleteModalMode === 'bulk') {
-        requestAnimationFrame(() => {
-          setSelectedStudents([]);
-        });
+        setSelectedStudents([]);
       }
     }
   };
@@ -329,8 +325,11 @@ function AdminStudents() {
             refreshAllStudents={fetchAllStudents}
             onSectionSelect={handleSectionSelect}
             availableSections={availableSections}
-            gradesData={gradesData} // Pass grades data to StudentTable if needed
-            sectionsData={sectionsData} // Pass sections data to StudentTable if needed
+            // Pass the students data directly from parent
+            students={allStudents}
+            gradesData={gradesData}
+            sectionsData={sectionsData}
+            loading={loadingData}
           />
         </>
       )}
@@ -362,8 +361,8 @@ function AdminStudents() {
         currentFilter={searchTerm}
         currentSection={selectedSection}
         currentGrade={currentGrade}
-        gradesData={gradesData} // Pass grades data
-        sectionsData={sectionsData} // Pass sections data
+        gradesData={gradesData}
+        sectionsData={sectionsData}
       />
     </main>
   );

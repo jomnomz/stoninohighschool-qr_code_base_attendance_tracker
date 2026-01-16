@@ -431,7 +431,7 @@ const TeacherStudentViewTable = () => {
               <th>NAME</th>
               <th>SECTION</th>
               <th>EMAIL</th>
-              <th>GENERATE ATTENDANCE REPORT</th>
+              <th>GENERATE</th>
             </tr>
           </thead>
           <tbody>

@@ -1,17 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRowExpansion } from '../../hooks/useRowExpansion'; 
-import { grades, shouldHandleRowClick, attendanceTableColumns } from '../../../Utils/tableHelpers';
+import { grades, shouldHandleRowClick } from '../../../Utils/tableHelpers';
 import { formatStudentName, formatDate, formatNA, formatAttendanceStatus } from '../../../Utils/Formatters'; 
 import { sortEntities } from '../../../Utils/SortEntities'; 
 import Button from '../../UI/Buttons/Button/Button';
+import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import styles from './AttendanceTable.module.css';
 import { useAttendance } from '../../Hooks/useAttendance';
 
-const AttendanceTable = () => {
+const AttendanceTable = ({
+  searchTerm = '',
+  selectedSection = '',
+  onSectionsUpdate,
+  onGradeUpdate,
+  onClearSectionFilter,
+  onSectionSelect,
+  availableSections = [],
+  loading: parentLoading = false
+}) => {
   const { 
     currentClass,
     attendances,
-    loading,
+    loading: attendanceLoading,
     error,
     currentDate,
     changeClass,
@@ -20,20 +30,16 @@ const AttendanceTable = () => {
   
   const { expandedRow, tableRef, toggleRow, isRowExpanded } = useRowExpansion();
 
-  // FIXED: Format time for display - The time in database is already Philippines time
+  // Format time for display
   const formatTimeDisplay = (timeString) => {
     if (!timeString) return 'N/A';
     
     try {
-      // The time in database is already Philippines time (UTC+8)
-      // Scanner stores it as "19:19:17" for 7:19 PM Philippines time
       const [hours, minutes, seconds] = timeString.split(':').map(Number);
       
-      // Create a date object with the time (date doesn't matter)
       const date = new Date();
       date.setHours(hours, minutes, seconds);
       
-      // Format as Philippines time
       return date.toLocaleTimeString('en-PH', {
         hour: '2-digit',
         minute: '2-digit',
@@ -54,11 +60,9 @@ const AttendanceTable = () => {
     try {
       const [hours, minutes] = timeString.split(':').map(Number);
       
-      // Create a date object with the time
       const date = new Date();
       date.setHours(hours, minutes);
       
-      // Format as Philippines time without seconds
       return date.toLocaleTimeString('en-PH', {
         hour: '2-digit',
         minute: '2-digit',
@@ -74,6 +78,12 @@ const AttendanceTable = () => {
   const handleClassChange = (className) => {
     changeClass(className);
     toggleRow(null);
+  };
+
+  const handleSectionFilter = (section) => {
+    if (onSectionSelect) {
+      onSectionSelect(section);
+    }
   };
 
   const handleRowClick = (attendanceId, e) => {
@@ -106,17 +116,66 @@ const AttendanceTable = () => {
     };
   };
 
-  // Sort attendances
-  const sortedAttendances = useMemo(() => {
-    return sortEntities(attendances, { type: 'student' });
+  // Get unique sections from current attendances
+  const allUniqueSections = useMemo(() => {
+    const sections = attendances
+      .map(attendance => attendance.section || '')
+      .filter(section => section && section.trim() !== '');
+    
+    const uniqueSections = [...new Set(sections)];
+    return uniqueSections.sort();
   }, [attendances]);
+
+  // Sort and filter attendances
+  const sortedAttendances = useMemo(() => {
+    let filtered = sortEntities(attendances, { type: 'student' });
+    
+    // Apply grade filter (already handled by useAttendance, but just in case)
+    if (currentClass !== 'all') {
+      filtered = filtered.filter(attendance => attendance.grade === currentClass);
+    }
+    
+    // Apply section filter
+    if (selectedSection) {
+      filtered = filtered.filter(attendance => attendance.section === selectedSection);
+    }
+    
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(attendance => 
+        attendance.lrn?.toLowerCase().includes(searchLower) ||
+        attendance.first_name?.toLowerCase().includes(searchLower) ||
+        attendance.last_name?.toLowerCase().includes(searchLower) ||
+        attendance.grade?.toString().toLowerCase().includes(searchLower) ||
+        attendance.section?.toString().toLowerCase().includes(searchLower) ||
+        attendance.status?.toLowerCase().includes(searchLower) ||
+        attendance.scan_type?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    console.log(`🔍 Filtered attendances: ${filtered.length} (from ${attendances.length} total)`);
+    return filtered;
+  }, [attendances, currentClass, selectedSection, searchTerm]);
+
+  useEffect(() => {
+    if (onSectionsUpdate) {
+      onSectionsUpdate(allUniqueSections);
+    }
+  }, [allUniqueSections, onSectionsUpdate]);
+
+  useEffect(() => {
+    if (onGradeUpdate) {
+      onGradeUpdate(currentClass);
+    }
+  }, [currentClass, onGradeUpdate]);
 
   const renderExpandedRow = (attendance) => {
     const statusInfo = formatStatusWithStyle(attendance.status);
     
     return (
       <tr className={`${styles.expandRow} ${isRowExpanded(attendance.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan={attendanceTableColumns.length}>
+        <td colSpan="9">
           <div 
             className={`${styles.attendanceCard} ${styles.expandableCard}`}
             onClick={(e) => e.stopPropagation()}
@@ -169,7 +228,8 @@ const AttendanceTable = () => {
             <td>{formatNA(attendance.lrn)}</td>
             <td>{formatNA(attendance.first_name)}</td>
             <td>{formatNA(attendance.last_name)}</td>
-            <td>{attendance.grade} - {attendance.section}</td>
+            <td>{attendance.grade}</td>
+            <td>{attendance.section}</td>
             <td>{formatTimeDisplayShort(attendance.time_in)}</td>
             <td>{formatTimeDisplayShort(attendance.time_out)}</td>
             <td>{formatDate(attendance.date)}</td>
@@ -185,7 +245,45 @@ const AttendanceTable = () => {
     );
   };
 
-  if (loading) {
+  const getTableInfoMessage = () => {
+    const attendanceCount = sortedAttendances.length;
+    
+    let message = '';
+    
+    if (selectedSection) {
+      message = `Showing ${attendanceCount} attendance records in Section ${selectedSection}`;
+      
+      if (currentClass === 'all') {
+        message += ' across all grades';
+      } else {
+        message += ` in Grade ${currentClass}`;
+      }
+      
+      if (searchTerm) {
+        message += ` matching "${searchTerm}"`;
+      }
+    } else if (searchTerm) {
+      message = `Found ${attendanceCount} attendance records matching "${searchTerm}"`;
+      
+      if (currentClass === 'all') {
+        message += ' across all grades';
+      } else {
+        message += ` in Grade ${currentClass}`;
+      }
+    } else {
+      if (currentClass === 'all') {
+        message = `Showing ${attendanceCount} attendance records across all grades`;
+      } else {
+        message = `Showing ${attendanceCount} attendance records in Grade ${currentClass}`;
+      }
+    }
+    
+    message += ` for ${currentDate || 'today'}`;
+    
+    return message;
+  };
+
+  if (parentLoading || attendanceLoading) {
     return (
       <div className={styles.attendanceTableContainer}>
         <div className={styles.loading}>Loading attendance records...</div>
@@ -233,12 +331,7 @@ const AttendanceTable = () => {
           ))}
 
           <div className={styles.tableInfo}>
-            <p>
-              Showing {sortedAttendances.length} attendance records for {currentDate}
-              {currentClass === 'all' 
-                ? ' across all grades' 
-                : ` in Grade ${currentClass}`}
-            </p>
+            <p>{getTableInfoMessage()}</p>
           </div>
         </div>
 
@@ -246,18 +339,33 @@ const AttendanceTable = () => {
           <table className={styles.attendancesTable}>
             <thead>
               <tr>
-                {attendanceTableColumns.map(column => (
-                  <th key={column.key}>{column.label}</th>
-                ))}
+                <th>LRN</th>
+                <th>FIRST NAME</th>
+                <th>LAST NAME</th>
+                <th>GRADE</th>
+                <th>
+                  <div className={styles.sectionHeader}>
+                    <div className={styles.sectionHeaderRow}>
+                      <span>SECTION</span>
+                      <SectionDropdown 
+                        availableSections={allUniqueSections}
+                        selectedValue={selectedSection}
+                        onSelect={handleSectionFilter}
+                      />
+                    </div>
+                  </div>
+                </th>
+                <th>TIME IN</th>
+                <th>TIME OUT</th>
+                <th>DATE</th>
+                <th>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {sortedAttendances.length === 0 ? (
                 <tr>
-                  <td colSpan={attendanceTableColumns.length} className={styles.noAttendance}>
-                    {currentClass === 'all' 
-                      ? `No attendance records found for ${currentDate} across all grades` 
-                      : `No attendance records found for ${currentDate} in Grade ${currentClass}`}
+                  <td colSpan="9" className={styles.noAttendance}>
+                    {getTableInfoMessage()}
                   </td>
                 </tr>
               ) : (

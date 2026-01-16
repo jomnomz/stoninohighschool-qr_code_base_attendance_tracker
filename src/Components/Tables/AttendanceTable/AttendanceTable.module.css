@@ -208,7 +208,26 @@ tbody tr {
   background-color: inherit;
 }
 
-/* Column widths - adjust based on your attendanceTableColumns */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.sectionHeader span {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Column widths for 9 columns */
 .tableWrapper table th:nth-child(1),
 .tableWrapper table td:nth-child(1) {
   width: 12%;
@@ -229,8 +248,8 @@ tbody tr {
 
 .tableWrapper table th:nth-child(4),
 .tableWrapper table td:nth-child(4) {
-  width: 15%;
-  min-width: 150px;
+  width: 8%;
+  min-width: 80px;
 }
 
 .tableWrapper table th:nth-child(5),
@@ -247,12 +266,18 @@ tbody tr {
 
 .tableWrapper table th:nth-child(7),
 .tableWrapper table td:nth-child(7) {
-  width: 12%;
-  min-width: 120px;
+  width: 10%;
+  min-width: 100px;
 }
 
 .tableWrapper table th:nth-child(8),
 .tableWrapper table td:nth-child(8) {
+  width: 10%;
+  min-width: 120px;
+}
+
+.tableWrapper table th:nth-child(9),
+.tableWrapper table td:nth-child(9) {
   width: 12%;
   min-width: 120px;
 }
@@ -282,15 +307,33 @@ tbody tr {
   
   .tableWrapper table th:nth-child(4),
   .tableWrapper table td:nth-child(4) {
-    width: 14%;
-    min-width: 140px;
+    width: 7%;
+    min-width: 70px;
   }
   
   .tableWrapper table th:nth-child(5),
-  .tableWrapper table td:nth-child(5),
-  .tableWrapper table th:nth-child(6),
-  .tableWrapper table td:nth-child(6) {
+  .tableWrapper table td:nth-child(5) {
     width: 9%;
     min-width: 90px;
+  }
+  
+  .tableWrapper table th:nth-child(6),
+  .tableWrapper table td:nth-child(6),
+  .tableWrapper table th:nth-child(7),
+  .tableWrapper table td:nth-child(7) {
+    width: 9%;
+    min-width: 90px;
+  }
+  
+  .tableWrapper table th:nth-child(8),
+  .tableWrapper table td:nth-child(8) {
+    width: 9%;
+    min-width: 110px;
+  }
+  
+  .tableWrapper table th:nth-child(9),
+  .tableWrapper table td:nth-child(9) {
+    width: 11%;
+    min-width: 110px;
   }
 }

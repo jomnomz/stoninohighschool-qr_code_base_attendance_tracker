@@ -1,13 +1,8 @@
- import React, { useMemo, useState, useEffect } from 'react';
-import { useStudents } from '../../Hooks/useEntities'; 
-import { useEntityEdit } from '../../hooks/useEntityEdit'; 
-import { useRowExpansion } from '../../hooks/useRowExpansion';
-import { useStudentActions } from '../../Hooks/useEntityActions'; 
-import { StudentService } from '../../../Utils/EntityService'; 
+import React, { useMemo, useState, useEffect } from 'react';
 import { grades, shouldHandleRowClick } from '../../../Utils/tableHelpers';
 import { sortStudents } from '../../../Utils/SortEntities'; 
 import { compareSections } from '../../../Utils/CompareHelpers'; 
-import { formatStudentName, formatGradeSection, formatDate, formatNA } from '../../../Utils/Formatters';
+import { formatStudentName, formatNA } from '../../../Utils/Formatters';
 import Button from '../../UI/Buttons/Button/Button';
 import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import QRCodeModal from '../../Modals/QRCodeModal/QRCodeModal';
@@ -18,7 +13,10 @@ import { faCircle as farCircle } from "@fortawesome/free-regular-svg-icons";
 import { faQrcode, faPenToSquare, faTrashCan, faCircle as fasCircle } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { useAuth } from '../../Authentication/AuthProvider/AuthProvider'; 
-import { supabase } from '../../../lib/supabase';
+import { useEntityEdit } from '../../hooks/useEntityEdit'; 
+import { useRowExpansion } from '../../hooks/useRowExpansion';
+import { useStudentActions } from '../../Hooks/useEntityActions'; 
+import { StudentService } from '../../../Utils/EntityService'; 
 
 const formatDateTimeLocal = (dateString) => {
   if (!dateString) return 'N/A';
@@ -57,7 +55,12 @@ const StudentTable = ({
   refreshStudents,
   refreshAllStudents,
   onSectionSelect,
-  availableSections = []
+  availableSections = [],
+  // Props from parent
+  students: propStudents = [],
+  gradesData = [],
+  sectionsData = [],
+  loading: parentLoading = false
 }) => {
     
   const [students, setStudents] = useState([]);
@@ -83,94 +86,71 @@ const StudentTable = ({
   const [updateWarningOpen, setUpdateWarningOpen] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState(null);
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [sectionInputValue, setSectionInputValue] = useState('');
-  const [sectionSuggestionsId] = useState(() => `sectionSuggestions_${Math.random().toString(36).substr(2, 9)}`);
+  const [gradeSectionsMap, setGradeSectionsMap] = useState({});
 
   const studentService = useMemo(() => new StudentService(), []);
 
-  // Fetch students with joins
+  // Initialize students from parent props
   useEffect(() => {
-    async function fetchStudents() {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        let query = supabase
-          .from('students')
-          .select(`
-            *,
-            grade:grades(grade_level),
-            section:sections(section_name, room:rooms(room_number))
-          `);
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          setError(error.message);
-        } else {
-          // Transform the data to flatten grade and section
-          const transformedData = (data || []).map(student => ({
-            ...student,
-            // Flatten grade to just the grade_level string
-            grade: student.grade?.grade_level || student.grade,
-            // Flatten section to just the section_name string
-            section: student.section?.section_name || student.section
-          }));
-          
-          setStudents(transformedData);
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    if (propStudents && propStudents.length > 0) {
+      console.log('📊 Initializing students from parent:', propStudents.length);
+      setStudents(propStudents);
+      setLoading(false);
+    } else if (!parentLoading) {
+      setStudents([]);
+      setLoading(false);
     }
-    
-    fetchStudents();
-  }, []);
+  }, [propStudents, parentLoading]);
 
-  // Add real-time subscription
+  // Update students when parent data changes
   useEffect(() => {
-    const channel = supabase
-      .channel('students-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'students' }, 
-        () => {
-          // Refetch students when changes occur
-          supabase
-            .from('students')
-            .select(`
-              *,
-              grade:grades(grade_level),
-              section:sections(section_name, room:rooms(room_number))
-            `)
-            .then(({ data, error }) => {
-              if (!error) {
-                setStudents(data || []);
-              }
-            });
+    if (propStudents && propStudents.length >= 0) {
+      setStudents(propStudents);
+    }
+  }, [propStudents]);
+
+  // Get sections for each grade from props
+  useEffect(() => {
+    if (sectionsData.length > 0 && gradesData.length > 0) {
+      console.log('📋 Building grade-sections map from props...');
+      const map = {};
+      
+      // Create a map of grade_id to grade_level (just numbers now)
+      const gradeIdToLevel = {};
+      gradesData.forEach(grade => {
+        gradeIdToLevel[grade.id] = grade.grade_level; // Just "7", "8", etc.
+      });
+      
+      // Build the sections map
+      sectionsData.forEach(section => {
+        const gradeLevel = gradeIdToLevel[section.grade_id];
+        if (gradeLevel) {
+          if (!map[gradeLevel]) {
+            map[gradeLevel] = [];
+          }
+          map[gradeLevel].push(section.section_name);
         }
-      )
-      .subscribe();
+      });
+      
+      // Sort sections
+      Object.keys(map).forEach(grade => {
+        map[grade] = map[grade].sort(compareSections);
+      });
+      
+      console.log('📋 Grade-sections map:', map);
+      setGradeSectionsMap(map);
+    }
+  }, [gradesData, sectionsData]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
+  // Get unique sections from current students
   const allUniqueSections = useMemo(() => {
     const sections = students
-      .map(student => {
-        // Handle both old string format and new object format
-        if (typeof student.section === 'object' && student.section !== null) {
-          return student.section.section_name || '';
-        }
-        return student.section?.toString() || '';
-      })
+      .map(student => student.section || '')
       .filter(section => section && section.trim() !== '');
     
     const uniqueSections = [...new Set(sections)];
-    return uniqueSections.sort(compareSections);
+    const sorted = uniqueSections.sort(compareSections);
+    return sorted;
   }, [students]);
 
   const currentGradeSections = useMemo(() => {
@@ -179,19 +159,8 @@ const StudentTable = ({
     }
     
     const sections = students
-      .filter(student => {
-        // Handle both old string format and new object format
-        const studentGrade = typeof student.grade === 'object' && student.grade !== null 
-          ? student.grade.grade_level 
-          : student.grade?.toString();
-        return studentGrade === currentClass;
-      })
-      .map(student => {
-        if (typeof student.section === 'object' && student.section !== null) {
-          return student.section.section_name || '';
-        }
-        return student.section?.toString() || '';
-      })
+      .filter(student => student.grade === currentClass)
+      .map(student => student.section || '')
       .filter(section => section && section.trim() !== '');
     
     const uniqueSections = [...new Set(sections)];
@@ -206,14 +175,13 @@ const StudentTable = ({
     }
   }, [selectedSection, currentGradeSections, allUniqueSections]);
 
-  const filteredSectionSuggestions = useMemo(() => {
-    if (!sectionInputValue) return allUniqueSections;
+  // Get available sections for the currently edited grade
+  const availableSectionsForCurrentGrade = useMemo(() => {
+    if (!editFormData.grade) return [];
     
-    const inputLower = sectionInputValue.toLowerCase();
-    return allUniqueSections.filter(section => 
-      section.toLowerCase().includes(inputLower)
-    );
-  }, [allUniqueSections, sectionInputValue]);
+    const sections = gradeSectionsMap[editFormData.grade] || [];
+    return sections;
+  }, [editFormData.grade, gradeSectionsMap]);
 
   useEffect(() => {
     if (onGradeUpdate) {
@@ -233,21 +201,14 @@ const StudentTable = ({
     // Apply grade filter first
     if (currentClass !== 'all') {
       filtered = filtered.filter(student => {
-        const studentGrade = typeof student.grade === 'object' && student.grade !== null 
-          ? student.grade.grade_level 
-          : student.grade?.toString();
+        const studentGrade = student.grade || '';
         return studentGrade === currentClass;
       });
     }
       
     // Apply section filter second
     if (selectedSection) {
-      filtered = filtered.filter(student => {
-        const studentSection = typeof student.section === 'object' && student.section !== null
-          ? student.section.section_name
-          : student.section?.toString();
-        return studentSection === selectedSection;
-      });
+      filtered = filtered.filter(student => student.section === selectedSection);
     }
     
     // Apply search filter last
@@ -256,10 +217,9 @@ const StudentTable = ({
       filtered = filtered.filter(student => 
         student.lrn?.toLowerCase().includes(searchLower) ||
         student.first_name?.toLowerCase().includes(searchLower) ||
-        student.middle_name?.toLowerCase().includes(searchLower) ||
         student.last_name?.toLowerCase().includes(searchLower) ||
-        (typeof student.grade === 'object' ? student.grade.grade_level?.toLowerCase().includes(searchLower) : student.grade?.toString().toLowerCase().includes(searchLower)) ||
-        (typeof student.section === 'object' ? student.section.section_name?.toLowerCase().includes(searchLower) : student.section?.toString().toLowerCase().includes(searchLower)) ||
+        student.grade?.toString().toLowerCase().includes(searchLower) ||
+        student.section?.toString().toLowerCase().includes(searchLower) ||
         student.email?.toLowerCase().includes(searchLower) ||
         student.phone_number?.toLowerCase().includes(searchLower) ||
         student.guardian_first_name?.toLowerCase().includes(searchLower) ||
@@ -268,10 +228,14 @@ const StudentTable = ({
       );
     }
     
+    console.log(`🔍 Filtered students: ${filtered.length} (from ${students.length} total)`);
     return filtered;
   }, [students, currentClass, selectedSection, searchTerm]);
 
-  const sortedStudents = useMemo(() => sortStudents(filteredStudents), [filteredStudents]);
+  const sortedStudents = useMemo(() => {
+    const sorted = sortStudents(filteredStudents);
+    return sorted;
+  }, [filteredStudents]);
 
   const visibleSelectedStudents = useMemo(() => {
     const visibleStudentIds = new Set(sortedStudents.map(student => student.id));
@@ -283,12 +247,6 @@ const StudentTable = ({
       onSelectedStudentsUpdate(visibleSelectedStudents);
     }
   }, [visibleSelectedStudents, onSelectedStudentsUpdate]);
-  
-  useEffect(() => {
-    if (onStudentDataUpdate) {
-      onStudentDataUpdate(students);
-    }
-  }, [students, onStudentDataUpdate]);
 
   const handleClassChange = (className) => {
     setCurrentClass(className);
@@ -320,81 +278,114 @@ const StudentTable = ({
   const handleEditClick = (student, e) => {
     e.stopPropagation();
     
-    // Convert grade/section objects to strings for editing
+    console.log('✏️ Editing student:', {
+      id: student.id,
+      name: `${student.first_name} ${student.last_name}`,
+      grade: student.grade,
+      section: student.section
+    });
+    
     const studentForEdit = {
       ...student,
-      grade: typeof student.grade === 'object' ? student.grade.grade_level : student.grade,
-      section: typeof student.section === 'object' ? student.section.section_name : student.section
+      grade: student.grade, // Should be just "7", "8", etc.
+      section: student.section
     };
     
     startEdit(studentForEdit);
-    setSectionInputValue(studentForEdit.section || '');
     toggleRow(null); 
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     updateEditField(name, value);
-    
-    if (name === 'section') {
-      setSectionInputValue(value);
-    }
   };
 
   const handleSelectChange = (e) => {
-    const { name, value } = e.target;
+  const { name, value } = e.target;
+  
+  if (name === 'grade') {
+    const gradeSections = gradeSectionsMap[value] || [];
+    
+    // Keep the current section if it's valid for the new grade
+    if (editFormData.section && gradeSections.includes(editFormData.section)) {
+      updateEditField(name, value);
+    } else {
+      // Auto-select the first section for the new grade
+      const firstSection = gradeSections.length > 0 ? gradeSections[0] : '';
+      updateEditField('section', firstSection);
+      updateEditField(name, value);
+    }
+  } else {
     updateEditField(name, value);
-  };
+  }
+};
 
   const handleSaveEdit = async (studentId, e) => {
     if (e) e.stopPropagation();
     
     const student = students.find(s => s.id === studentId);
     
-    // Get original grade/section as strings for comparison
-    const originalGrade = typeof student.grade === 'object' ? student.grade.grade_level : student.grade;
-    const originalSection = typeof student.section === 'object' ? student.section.section_name : student.section;
-    
     const criticalFieldsChanged = 
       editFormData.lrn !== student.lrn ||
       editFormData.first_name !== student.first_name ||
       editFormData.last_name !== student.last_name ||
-      editFormData.grade !== originalGrade ||
-      editFormData.section !== originalSection;
+      editFormData.grade !== student.grade ||
+      editFormData.section !== student.section;
 
     if (criticalFieldsChanged) {
       setPendingUpdate({ studentId, student });
       setUpdateWarningOpen(true);
     } else {
-      // Find grade_id and section_id for the updated values
-      let gradeId = null;
-      let sectionId = null;
+      await performStudentUpdate(studentId);
+    }
+  };
+
+  const performStudentUpdate = async (studentId) => {
+    let gradeId = null;
+    let sectionId = null;
+    
+    try {
+      console.log('🔍 Finding grade and section IDs for:', {
+        grade: editFormData.grade,
+        section: editFormData.section
+      });
       
-      try {
-        // Find grade_id
-        if (editFormData.grade) {
-          const { data: gradeData } = await supabase
-            .from('grades')
-            .select('id')
-            .eq('grade_level', editFormData.grade.startsWith('Grade ') ? editFormData.grade : `Grade ${editFormData.grade}`)
-            .single();
-          
-          if (gradeData) gradeId = gradeData.id;
-        }
+      // Find grade_id from grades table
+      if (editFormData.grade) {
+        // Find grade by exact match (just "7", "8", etc.)
+        const grade = gradesData.find(g => g.grade_level === editFormData.grade);
         
-        // Find section_id (requires grade_id)
-        if (editFormData.section && gradeId) {
-          const { data: sectionData } = await supabase
-            .from('sections')
-            .select('id')
-            .eq('grade_id', gradeId)
-            .eq('section_name', editFormData.section)
-            .single();
-          
-          if (sectionData) sectionId = sectionData.id;
+        if (grade) {
+          gradeId = grade.id;
+          console.log('✅ Found grade_id:', gradeId, 'for grade:', editFormData.grade);
+        } else {
+          console.error('❌ Grade not found:', editFormData.grade);
+          console.log('Available grades:', gradesData.map(g => g.grade_level));
         }
-      } catch (error) {
-        console.error('Error finding grade/section IDs:', error);
+      }
+      
+      // Find section_id from sections table
+      if (editFormData.section && gradeId) {
+        const sectionsForGrade = sectionsData.filter(s => s.grade_id === gradeId);
+        console.log('📋 Sections for grade_id', gradeId, ':', sectionsForGrade);
+        
+        const section = sectionsData.find(s => 
+          s.section_name === editFormData.section && 
+          s.grade_id === gradeId
+        );
+        
+        if (section) {
+          sectionId = section.id;
+          console.log('✅ Found section_id:', sectionId);
+        } else {
+          console.error('❌ Section not found for this grade');
+        }
+      }
+      
+      console.log('📝 Final IDs to update:', { gradeId, sectionId });
+      
+      if (!gradeId) {
+        throw new Error(`Grade "${editFormData.grade}" not found. Available grades: ${gradesData.map(g => g.grade_level).join(', ')}`);
       }
       
       const result = await saveEdit(
@@ -402,100 +393,58 @@ const StudentTable = ({
         currentClass, 
         async (id, data) => {
           const updateData = {
-            ...data,
+            lrn: data.lrn,
+            first_name: data.first_name,
+            middle_name: data.middle_name,
+            last_name: data.last_name,
+            email: data.email,
+            phone_number: data.phone_number,
+            guardian_first_name: data.guardian_first_name,
+            guardian_middle_name: data.guardian_middle_name,
+            guardian_last_name: data.guardian_last_name,
+            guardian_phone_number: data.guardian_phone_number,
+            guardian_email: data.guardian_email,
             updated_by: user?.id,
             updated_at: new Date().toISOString()
           };
           
-          // Add grade_id and section_id if found
-          if (gradeId) updateData.grade_id = gradeId;
-          if (sectionId) updateData.section_id = sectionId;
+          // Use the found IDs
+          updateData.grade_id = gradeId;
+          updateData.grade = editFormData.grade;  // Just "7", "8", etc.
           
-          // Remove grade/section text fields if IDs are provided
-          if (gradeId) delete updateData.grade;
-          if (sectionId) delete updateData.section;
+          if (sectionId) {
+            updateData.section_id = sectionId;
+            updateData.section = editFormData.section;
+          } else {
+            updateData.section_id = null;
+            updateData.section = '';
+          }
           
-          return await studentService.update(id, updateData);
+          console.log('💾 Updating student:', updateData);
+          
+          const result = await studentService.update(id, updateData);
+          return result;
         }
       );
       
       if (result.success) {
-        success('Student information updated successfully');
-        if (result.gradeChanged) {
-          success(`Student moved to Grade ${editFormData.grade}`);
-        }
+        success('Student updated successfully');
         if (refreshStudents) {
-          refreshStudents();
+          await refreshStudents();
         }
-      } else {
-        console.error(result.error);
       }
+      
+    } catch (error) {
+      console.error('Update error:', error);
+      alert(`Error: ${error.message}`);
     }
-    setSectionInputValue('');
   };
 
   const handleConfirmUpdate = async () => {
     if (pendingUpdate) {
-      // Similar logic as handleSaveEdit but for critical updates
-      const result = await saveEdit(
-        pendingUpdate.studentId, 
-        currentClass, 
-        async (id, data) => {
-          // Find grade_id and section_id
-          let gradeId = null;
-          let sectionId = null;
-          
-          if (editFormData.grade) {
-            const { data: gradeData } = await supabase
-              .from('grades')
-              .select('id')
-              .eq('grade_level', editFormData.grade.startsWith('Grade ') ? editFormData.grade : `Grade ${editFormData.grade}`)
-              .single();
-            
-            if (gradeData) gradeId = gradeData.id;
-          }
-          
-          if (editFormData.section && gradeId) {
-            const { data: sectionData } = await supabase
-              .from('sections')
-              .select('id')
-              .eq('grade_id', gradeId)
-              .eq('section_name', editFormData.section)
-              .single();
-            
-            if (sectionData) sectionId = sectionData.id;
-          }
-          
-          const updateData = {
-            ...data,
-            updated_by: user?.id,
-            updated_at: new Date().toISOString()
-          };
-          
-          if (gradeId) updateData.grade_id = gradeId;
-          if (sectionId) updateData.section_id = sectionId;
-          
-          // Remove text fields if IDs are provided
-          if (gradeId) delete updateData.grade;
-          if (sectionId) delete updateData.section;
-          
-          return await studentService.update(id, updateData);
-        }
-      );
-      
-      if (result.success) {
-        success('Student information updated successfully');
-        if (result.gradeChanged) {
-          success(`Student moved to Grade ${editFormData.grade}`);
-        }
-        if (refreshStudents) {
-          refreshStudents();
-        }
-      } else {
-        console.error(result.error);
-      }
+      await performStudentUpdate(pendingUpdate.studentId);
       setPendingUpdate(null);
-      setSectionInputValue('');
+      setUpdateWarningOpen(false);
     }
   };
 
@@ -575,63 +524,68 @@ const StudentTable = ({
     >
       {grades.map(grade => (
         <option key={grade} value={grade}>
-          {grade}
+          Grade {grade}
         </option>
       ))}
     </select>
   );
 
-  const renderSectionInput = () => (
-    <>
-      <input
-        type="text"
+  const renderSectionDropdown = () => {
+    const sections = availableSectionsForCurrentGrade;
+    
+    if (!editFormData.grade || sections.length === 0) {
+      return (
+        <div className={styles.noSectionsMessage}>
+          {!editFormData.grade ? 'Select a grade first' : 'No sections available for this grade'}
+        </div>
+      );
+    }
+    
+    return (
+      <select
         name="section"
-        list={sectionSuggestionsId}
         value={editFormData.section || ''}
-        onChange={handleInputChange}
+        onChange={handleSelectChange}
         onClick={handleInputClick}
-        className={`${styles.editInput} ${validationErrors.section ? styles.errorInput : ''} edit-input`}
-        placeholder="Enter section"
-        autoComplete="off"
-      />
-      <datalist id={sectionSuggestionsId}>
-        {filteredSectionSuggestions.map(section => (
-          <option key={section} value={section} />
+        className={`${styles.editSelect} ${validationErrors.section ? styles.errorInput : ''} edit-input`}
+      >
+        {sections.map(section => (
+          <option key={section} value={section}>
+            {section}
+          </option>
         ))}
-      </datalist>
-    </>
-  );
+      </select>
+    );
+  };
 
   const renderField = (student, fieldName, isEditable = true) => {
     if (editingStudent === student.id && isEditable) {
       if (fieldName === 'grade') {
         return renderGradeDropdown();
       } else if (fieldName === 'section') {
-        return renderSectionInput();
+        return renderSectionDropdown();
       } else if (fieldName.startsWith('guardian_')) {
         return renderGuardianEditInput(fieldName, fieldName.includes('email') ? 'email' : 'text');
       }
       return renderEditInput(fieldName, fieldName === 'email' ? 'email' : 'text');
     }
     
-    // Display logic - now grade and section are already flattened strings
-    // Email and phone are only shown in expanded row, not in main table
     if (fieldName === 'email' || fieldName === 'phone_number') {
-      return ''; // Return empty string to hide from main table
+      return ''; 
     }
     
     if (fieldName.startsWith('guardian_')) {
       return formatNA(student[fieldName]);
     }
     
-    return student[fieldName];
+    return student[fieldName] || '';
   };
 
   const renderActionButtons = (student) => (
     <div className={`${styles.editActions} action-button`}>
       <button 
         onClick={(e) => handleSaveEdit(student.id, e)}
-        disabled={saving}
+        disabled={saving || !editFormData.grade || !editFormData.section}
         className={styles.saveBtn}
       >
         {saving ? 'Saving...' : 'Save'}
@@ -639,7 +593,6 @@ const StudentTable = ({
       <button 
         onClick={() => {
           cancelEdit();
-          setSectionInputValue('');
         }}
         disabled={saving}
         className={styles.cancelBtn}
@@ -691,18 +644,9 @@ const StudentTable = ({
         )
       : 'Not yet updated';
 
-    // Get grade and section display values
-    const gradeDisplay = typeof student.grade === 'object' && student.grade !== null 
-      ? student.grade.grade_level 
-      : student.grade;
-    
-    const sectionDisplay = typeof student.section === 'object' && student.section !== null
-      ? student.section.section_name
-      : student.section;
-
     return (
       <tr className={`${styles.expandRow} ${isRowExpanded(student.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="10"> {/* Changed from 12 to 10 since we removed 2 columns */}
+        <td colSpan="9">
           <div 
             className={`${styles.studentCard} ${styles.expandableCard}`}
             onClick={(e) => e.stopPropagation()}
@@ -717,7 +661,7 @@ const StudentTable = ({
                   <strong>Student Details</strong>
                 </div>
                 <div className={styles.studentInfo}>LRN: {student.lrn}</div>
-                <div className={styles.studentInfo}>Grade & Section: {gradeDisplay} - {sectionDisplay}</div>
+                <div className={styles.studentInfo}>Grade & Section: {student.grade} - {student.section}</div>
                 <div className={styles.studentInfo}>Full Name: {formatStudentName(student)}</div>
                 <div className={styles.studentInfo}>Email: {formatNA(student.email)}</div>
                 <div className={styles.studentInfo}>Phone: {formatNA(student.phone_number)}</div>
@@ -767,6 +711,7 @@ const StudentTable = ({
   const renderRegularRow = (student, rowColorClass, visibleRowIndex, isSelected) => {
     return (
       <tr 
+        key={student.id}
         className={`${styles.studentRow} ${rowColorClass} ${editingStudent === student.id ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
         onClick={(e) => handleRowClick(student.id, e)}
       >
@@ -783,7 +728,6 @@ const StudentTable = ({
         </td>
         <td>{renderField(student, 'lrn')}</td>
         <td>{renderField(student, 'first_name')}</td>
-        <td>{renderField(student, 'middle_name')}</td>
         <td>{renderField(student, 'last_name')}</td>
         <td>{renderField(student, 'grade')}</td>
         <td>{renderField(student, 'section')}</td>
@@ -811,57 +755,7 @@ const StudentTable = ({
     );
   };
 
-  const renderHiddenRow = (student, rowColorClass, isSelected) => {
-    return (
-      <tr 
-        className={`${styles.studentRow} ${rowColorClass} ${editingStudent === student.id ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-        onClick={(e) => handleRowClick(student.id, e)}
-        style={{ height: '0px', visibility: 'hidden', overflow: 'hidden' }}
-      >
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>
-          <div className={styles.icon} onClick={(e) => handleStudentSelect(student.id, e)}>
-            <FontAwesomeIcon 
-              icon={isSelected ? fasCircle : farCircle} 
-              style={{ 
-                cursor: 'pointer', 
-                color: isSelected ? '#007bff' : '',
-                visibility: 'hidden'
-              }}
-            />
-          </div>
-        </td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'lrn')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'first_name')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'middle_name')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'last_name')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'grade')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderField(student, 'section')}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faQrcode} 
-              onClick={(e) => handleQRCodeClickWithEvent(student, e)} 
-              className="action-button"
-              style={{ cursor: 'pointer', visibility: 'hidden' }}
-            />
-          </div>
-        </td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>{renderEditCell(student)}</td>
-        <td style={{ height: '0px', padding: '0', border: 'none' }}>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faTrashCan} 
-              className="action-button"
-              onClick={(e) => handleDeleteClickWithEvent(student, e)}
-              style={{ visibility: 'hidden' }}
-            />
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  if (loading) {
+  if (parentLoading || loading) {
     return (
       <div className={styles.studentTableContainer}>
         <div className={styles.loading}>Loading students...</div>
@@ -970,7 +864,6 @@ const StudentTable = ({
                 </th>
                 <th>LRN</th>
                 <th>FIRST NAME</th>
-                <th>MIDDLE NAME</th>
                 <th>LAST NAME</th>
                 <th>GRADE</th>
                 <th>
@@ -991,35 +884,35 @@ const StudentTable = ({
               </tr>
             </thead>
             <tbody>
-              {sortedStudents.length === 0 ? (
-                <tr>
-                  <td colSpan="10" className={styles.noStudents}> {/* Changed from 12 to 10 */}
-                    {getTableInfoMessage()}
-                  </td>
-                </tr>
-              ) : (
-                sortedStudents.map((student, index) => {
-                  const visibleRowIndex = sortedStudents
-                    .slice(0, index)
-                    .filter(s => !isRowExpanded(s.id))
-                    .length;
-                  
-                  const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                  const isSelected = selectedStudents.includes(student.id);
+  {sortedStudents.length === 0 ? (
+    <tr>
+      <td colSpan="9" className={styles.noStudents}>
+        {getTableInfoMessage()}
+      </td>
+    </tr>
+  ) : (
+    sortedStudents.map((student, index) => {
+      const visibleRowIndex = sortedStudents
+        .slice(0, index)
+        .filter(s => !isRowExpanded(s.id))
+        .length;
+      
+      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
+      const isSelected = selectedStudents.includes(student.id);
 
-                  if (isRowExpanded(student.id)) {
-                    return (
-                      <React.Fragment key={student.id}>
-                        {renderHiddenRow(student, rowColorClass, isSelected)}
-                        {renderExpandedRow(student)}
-                      </React.Fragment>
-                    );
-                  } else {
-                    return renderRegularRow(student, rowColorClass, visibleRowIndex, isSelected);
-                  }
-                })
-              )}
-            </tbody>
+      return (
+        <React.Fragment key={student.id}>
+          {/* Only show regular row if NOT expanded */}
+          {!isRowExpanded(student.id) && (
+            renderRegularRow(student, rowColorClass, visibleRowIndex, isSelected)
+          )}
+          {/* Always render expanded row (it will be hidden if not active) */}
+          {renderExpandedRow(student)}
+        </React.Fragment>
+      );
+    })
+  )}
+</tbody>
           </table>
         </div>
       </div>

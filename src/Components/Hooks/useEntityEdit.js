@@ -14,12 +14,18 @@ export const useEntityEdit = (entities, setEntities, entityType = 'student', ref
     setValidationErrors({});
     
     if (entityType === 'student') {
+      // Ensure grade is just a number (clean up any "Grade " prefix)
+      let grade = entity.grade;
+      if (grade && typeof grade === 'string' && grade.includes('Grade ')) {
+        grade = grade.replace('Grade ', '');
+      }
+      
       setEditFormData({
         lrn: entity.lrn,
         first_name: entity.first_name,
         middle_name: entity.middle_name,
         last_name: entity.last_name,
-        grade: entity.grade,
+        grade: grade,  // Just "7", "8", etc.
         section: entity.section,
         email: entity.email,
         phone_number: entity.phone_number,
@@ -116,23 +122,11 @@ export const useEntityEdit = (entities, setEntities, entityType = 'student', ref
       
       const updatedEntity = await updateService(entityId, editFormData);
       
+      // Always update the entity in local state
       setEntities(prevEntities => {
-        if (entityType === 'student') {
-          const entity = prevEntities.find(e => e.id === entityId);
-          const gradeChanged = entity && entity.grade !== updatedEntity.grade;
-          
-          if (gradeChanged && updatedEntity.grade !== currentClass) {
-            return prevEntities.filter(e => e.id !== entityId);
-          } else {
-            return prevEntities.map(entity => 
-              entity.id === entityId ? updatedEntity : entity
-            );
-          }
-        } else {
-          return prevEntities.map(entity => 
-            entity.id === entityId ? updatedEntity : entity
-          );
-        }
+        return prevEntities.map(entity => 
+          entity.id === entityId ? updatedEntity : entity
+        );
       });
 
       if (refreshAll) {
@@ -141,9 +135,22 @@ export const useEntityEdit = (entities, setEntities, entityType = 'student', ref
 
       cancelEdit();
       
+      let gradeChanged = false;
+      if (entityType === 'student') {
+        const entity = entities.find(e => e.id === entityId);
+        if (entity && editFormData.grade) {
+          let originalGrade = entity.grade;
+          // Clean up original grade if it has "Grade " prefix
+          if (typeof originalGrade === 'string' && originalGrade.includes('Grade ')) {
+            originalGrade = originalGrade.replace('Grade ', '');
+          }
+          gradeChanged = originalGrade !== editFormData.grade;
+        }
+      }
+      
       return { 
         success: true, 
-        gradeChanged: entityType === 'student' ? updatedEntity.grade !== currentClass : false 
+        gradeChanged
       };
       
     } catch (err) {

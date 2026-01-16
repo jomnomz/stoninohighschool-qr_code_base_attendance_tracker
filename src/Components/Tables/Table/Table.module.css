@@ -1,4 +1,3 @@
-/* components/Table/Table.module.css - COMPLETE FIXED */
 .tableContainer {
   height: 100%;
   display: flex;
@@ -6,6 +5,13 @@
 }
 
 .tableWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+
+.scrollWrapper {
   max-height: 59vh;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
@@ -13,14 +19,14 @@
   width: 98%;
 }
 
-.tableWrapper table {
+.scrollWrapper table {
   width: 100%;
   border-collapse: collapse;
   margin: 0;
   table-layout: auto;
 }
 
-.tableWrapper thead th {
+.scrollWrapper thead th {
   position: sticky;
   top: 0;
   background-color: #f2f2f2;
@@ -56,81 +62,51 @@ tbody tr {
   background-color: #f2f2f2 !important;
 }
 
-.tableRow:hover {
-  background-color: #8a8a8a !important;
+.itemRow {
   cursor: pointer;
 }
 
-.tableRow:hover td {
+.itemRow:hover {
+  background-color: #8a8a8a !important;
+}
+
+.itemRow:hover td {
   color: white;
 }
 
-.tableRow:hover .icon svg {
-  color: white !important;
-}
-
-/* FIXED HEADER - Copy from StudentTable */
 .classContainers {
   display: flex;
   gap: 10px;
   margin-bottom: 5px;
-  width: 100%;
 }
 
-.gradeButtons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  flex-grow: 1;
-}
-
-.tableInfo {
-  display: flex;
-  flex-direction: column;
-  justify-content: end;
-  margin-left: auto; /* THIS IS THE KEY */
-}
-
-.tableInfo p {
-  margin: 0;
-  font-weight: bold;
-  color: #003a02;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-/* Rest of your existing styles... */
-.expandedContent {
+.expandableCard {
   background-color: #f9f9f9;
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  padding: 20px;
-  margin: 10px;
   text-align: left;
+  padding: 20px;
+  cursor: default;
+  max-height: 0;
+  padding: 0 20px;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+  transform: scaleY(0.8);
+  transform-origin: top;
 }
 
-.expandedHeader {
-  font-weight: bold;
-  font-size: 24px;
-  margin-bottom: 15px;
-  color: #333;
+.expandRowActive .expandableCard {
+  max-height: 500px;
+  padding: 20px;
+  opacity: 1;
+  transform: scaleY(1);
 }
 
-.expandedDetails {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.detailItem {
-  font-size: 14px;
-  margin: 8px 0;
-}
-
-.detailItem strong {
-  display: inline-block;
-  min-width: 120px;
-  color: #555;
+.details {
+  display: flex;
+  flex-direction: row;
+  gap: 50px;
 }
 
 .expandRow {
@@ -157,14 +133,21 @@ tbody tr {
   border: none;
 }
 
-.loading, .error, .noData {
+.itemHeader {
+  font-weight: bold;
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.itemInfo {
+  font-size: 15px;
+  margin: 4px 0;
+}
+
+.loading, .error, .noItems {
   text-align: center;
   padding: 20px;
   font-size: 16px;
-}
-
-.loading {
-  color: #666;
 }
 
 .error {
@@ -174,15 +157,27 @@ tbody tr {
   border-radius: 4px;
 }
 
-.noData {
+.noItems {
   color: #6c757d;
   font-style: italic;
   text-align: center;
   padding: 40px;
 }
 
+.tableInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+
+.tableInfo p {
+  margin: 0;
+  font-weight: bold;
+  color: #003a02;
+}
+
 .icon {
-  font-size: 20px;
+  font-size: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -191,11 +186,10 @@ tbody tr {
 .icon svg {
   transition: color 0.2s;
   color: #6C757D;
-  cursor: pointer;
 }
 
 .icon svg:hover {
-  color: #333;
+  color: white;
 }
 
 .editInput {
@@ -214,15 +208,15 @@ tbody tr {
   border-color: #007bff;
 }
 
-.errorInput {
-  border-color: #d32f2f !important;
-  background-color: #ffebee;
+.editCell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .editActions {
   display: flex;
   gap: 8px;
-  justify-content: center;
 }
 
 .saveBtn, .cancelBtn {
@@ -263,6 +257,63 @@ tbody tr {
   cursor: not-allowed;
 }
 
+.editingRow {
+  cursor: default !important;
+}
+
+.editingRow:hover {
+  background-color: inherit;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.sectionHeader span {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.editSelect {
+  width: 100%;
+  padding: 8px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.editSelect:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.editInput[list] {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.editInput[list]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
 .selectedRow {
   background-color: #e3f2fd !important;
 }
@@ -271,58 +322,44 @@ tbody tr {
   background-color: #bbdefb !important;
 }
 
-.editingRow {
-  cursor: default !important;
+.errorRow {
+  background-color: #ffebee !important;
 }
 
-.editingRow:hover {
-  background-color: inherit !important;
+.errorMessages {
+  padding: 10px !important;
+  border-bottom: 2px solid #f44336;
 }
 
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+.errorMessage {
+  color: #f44336;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.errorMessage:last-child {
+  margin-bottom: 0;
+}
+
+.errorInput {
+  border-color: #f44336 !important;
+  background-color: #ffebee;
+}
+
+.action-button {
+  cursor: pointer;
 }
 
 /* Responsive adjustments */
-@media (max-width: 1200px) {
-  .classContainers {
+@media (max-width: 1400px) {
+  .details {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .tableInfo {
-    margin-left: 0;
-    width: 100%;
-  }
-  
-  .gradeButtons {
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 5px;
+    gap: 20px;
   }
 }
 
 @media (max-width: 768px) {
-  .expandedDetails {
-    grid-template-columns: 1fr;
-  }
-  
-  .detailItem strong {
-    min-width: 100px;
-  }
-  
-  .tableWrapper {
-    width: 100%;
+  .scrollWrapper {
+    overflow-x: auto;
   }
 }
-
-/* Column width helpers */
-.columnWidth-5 { width: 5%; min-width: 40px; }
-.columnWidth-8 { width: 8%; min-width: 70px; }
-.columnWidth-10 { width: 10%; min-width: 100px; }
-.columnWidth-12 { width: 12%; min-width: 120px; }
-.columnWidth-15 { width: 15%; min-width: 150px; }

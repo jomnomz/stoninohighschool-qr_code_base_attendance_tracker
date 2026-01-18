@@ -31,8 +31,8 @@ function Chatbot() {
     setIsLoading(true);
 
     try {
-      // HARDCODED API KEY - REPLACE WITH YOUR ACTUAL KEY
-      const apiKey = "AIzaSyAcItcKKAMvcBf4OgAOWNNx46VEzO3U8O0"; // ← REPLACE THIS
+      
+      const apiKey = "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"; //
       
       // Quick validation
       if (!apiKey || apiKey === "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") {

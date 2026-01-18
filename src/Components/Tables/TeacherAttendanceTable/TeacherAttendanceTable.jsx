@@ -4,13 +4,12 @@ import { sortEntities } from '../../../Utils/SortEntities';
 import styles from './TeacherAttendanceTable.module.css';
 import { supabase } from '../../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPenToSquare, faCalendarDays, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faSearch } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../../Components/UI/Input/Input.jsx';
 
 const TeacherAttendanceTable = ({ 
   className,
-  subject,
-  onEditClick
+  subject
 }) => {
   const [attendances, setAttendances] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -318,13 +317,6 @@ const TeacherAttendanceTable = ({
     return { className, text: displayText };
   }, []);
 
-  // Handle edit button click
-  const handleEditClick = useCallback((studentId, attendanceData) => {
-    if (onEditClick) {
-      onEditClick(studentId, attendanceData);
-    }
-  }, [onEditClick]);
-
   // Handle date selection
   const handleDateSelect = useCallback((date) => {
     setSelectedDate(date);
@@ -550,18 +542,17 @@ const TeacherAttendanceTable = ({
           <table className={styles.attendanceTable}>
             <thead>
               <tr>
-                <th className={styles.lrnColumn}>LRN</th>
-                <th className={styles.nameColumn}>STUDENT NAME</th>
-                <th className={styles.timeColumn}>TIME IN</th>
-                <th className={styles.timeColumn}>TIME OUT</th>
-                <th className={styles.statusColumn}>STATUS</th>
-                <th className={styles.editColumn}>EDIT</th>
+                <th className={`${styles.lrnColumn} ${styles.tableHeader}`}>LRN</th>
+                <th className={`${styles.nameColumn} ${styles.tableHeader}`}>STUDENT NAME</th>
+                <th className={`${styles.timeColumn} ${styles.tableHeader}`}>TIME IN</th>
+                <th className={`${styles.timeColumn} ${styles.tableHeader}`}>TIME OUT</th>
+                <th className={`${styles.statusColumn} ${styles.tableHeader}`}>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {filteredAttendances.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className={styles.noData}>
+                  <td colSpan="5" className={styles.noData}>
                     {attendances.length === 0 
                       ? `No students found in class ${className}`
                       : 'No students match your search criteria'}
@@ -576,23 +567,14 @@ const TeacherAttendanceTable = ({
                       key={attendance.id} 
                       className={index % 2 === 0 ? styles.rowEven : styles.rowOdd}
                     >
-                      <td className={styles.lrnCell}>{formatNA(attendance.lrn)}</td>
-                      <td className={styles.nameCell}>{formatStudentName(attendance)}</td>
-                      <td className={styles.timeCell}>{formatTimeDisplay(attendance.time_in)}</td>
-                      <td className={styles.timeCell}>{formatTimeDisplay(attendance.time_out)}</td>
-                      <td className={styles.statusCell}>
+                      <td className={`${styles.lrnCell} ${styles.tableCell}`}>{formatNA(attendance.lrn)}</td>
+                      <td className={`${styles.nameCell} ${styles.tableCell}`}>{formatStudentName(attendance)}</td>
+                      <td className={`${styles.timeCell} ${styles.tableCell}`}>{formatTimeDisplay(attendance.time_in)}</td>
+                      <td className={`${styles.timeCell} ${styles.tableCell}`}>{formatTimeDisplay(attendance.time_out)}</td>
+                      <td className={`${styles.statusCell} ${styles.tableCell}`}>
                         <span className={statusInfo.className}>
                           {statusInfo.text}
                         </span>
-                      </td>
-                      <td className={styles.editCell}>
-                        <button
-                          className={styles.editButton}
-                          onClick={() => handleEditClick(attendance.student_id, attendance)}
-                          title="Edit attendance"
-                        >
-                          <FontAwesomeIcon icon={faPenToSquare} />
-                        </button>
                       </td>
                     </tr>
                   );

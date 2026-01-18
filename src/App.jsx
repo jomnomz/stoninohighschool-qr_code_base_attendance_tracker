@@ -66,7 +66,7 @@ function App() {
               <Route path="students" element={<TeacherStudents />} />
               <Route path="attendance" element={<TeacherAttendance />} />
               <Route path="reports" element={<TeacherReports />} />
-              <Route path="settings" element={<TeacherSettings />} />
+              <Route path="settings" element={<AdminSettings />} />
             </Route>
           </Routes>
         </main>

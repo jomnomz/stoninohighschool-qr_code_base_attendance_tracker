@@ -22,6 +22,8 @@ import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import MessageIcon from '@mui/icons-material/Message';
 import SchoolIcon from '@mui/icons-material/School';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../../lib/supabase';
 
 function AdminDashboard() {
   // Fetch students data
@@ -29,6 +31,69 @@ function AdminDashboard() {
   
   // Fetch teachers data
   const { data: teachers, loading: teachersLoading } = useSupabaseData('teachers');
+
+  // State for SMS count
+  const [smsCount, setSmsCount] = useState(0);
+  const [smsLoading, setSmsLoading] = useState(true);
+  const [smsError, setSmsError] = useState(null);
+
+  // Get start and end of today in Philippine time (UTC+8)
+  const getTodayPhilippinesTimeRange = useCallback(() => {
+    const now = new Date();
+    
+    // Convert to Philippine time (UTC+8)
+    const phNow = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    
+    // Start of day in Philippine time
+    const startOfDay = new Date(phNow);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    // End of day in Philippine time
+    const endOfDay = new Date(phNow);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Convert back to UTC for database query
+    const startUTC = new Date(startOfDay.getTime() - (8 * 60 * 60 * 1000));
+    const endUTC = new Date(endOfDay.getTime() - (8 * 60 * 60 * 1000));
+    
+    return {
+      start: startUTC.toISOString(),
+      end: endUTC.toISOString()
+    };
+  }, []);
+
+  // Fetch SMS logs count for today
+  const fetchSmsCount = useCallback(async () => {
+    setSmsLoading(true);
+    setSmsError(null);
+    
+    try {
+      const { start, end } = getTodayPhilippinesTimeRange();
+      console.log('📱 Fetching SMS logs for today:', { start, end });
+      
+      // Get count of SMS logs for today (Philippine time)
+      const { data, error, count } = await supabase
+        .from('sms_logs')
+        .select('*', { count: 'exact', head: false })
+        .gte('sent_at', start)
+        .lte('sent_at', end);
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Found ${count || 0} SMS logs for today`);
+      setSmsCount(count || 0);
+      
+    } catch (err) {
+      console.error('❌ Error fetching SMS logs:', err);
+      setSmsError(err.message);
+      setSmsCount(0); // Default to 0 on error
+    } finally {
+      setSmsLoading(false);
+    }
+  }, [getTodayPhilippinesTimeRange]);
 
   // Count unique guardians (assuming each student has one guardian)
   const guardianCount = students?.reduce((unique, student) => {
@@ -45,7 +110,38 @@ function AdminDashboard() {
   // Total teachers count
   const totalTeachers = teachers?.length || 0;
 
-  const isLoading = studentsLoading || teachersLoading;
+  // Fetch SMS count on component mount
+  useEffect(() => {
+    fetchSmsCount();
+    
+    // Set up a refresh interval to update SMS count periodically (every 5 minutes)
+    const intervalId = setInterval(fetchSmsCount, 5 * 60 * 1000);
+    
+    // Set up real-time subscription for SMS logs
+    const channel = supabase
+      .channel('sms-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'sms_logs'
+        },
+        (payload) => {
+          console.log('📬 New SMS log inserted:', payload);
+          // Refresh SMS count when new logs are added
+          fetchSmsCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(intervalId);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSmsCount]);
+
+  const isLoading = studentsLoading || teachersLoading || smsLoading;
 
   if (isLoading) return <div>Loading dashboard...</div>;
 
@@ -114,7 +210,27 @@ function AdminDashboard() {
               <div className={styles.label}>
                 <MessageIcon sx={{ mb: -0.5 }}/> SMS Sent Today
               </div>
-              <div className={styles.number}>{1000}</div>             
+              <div className={styles.number}>
+                {smsError ? (
+                  <span className={styles.errorText}>Error</span>
+                ) : (
+                  smsCount.toLocaleString()
+                )}
+              </div>
+              {smsError && (
+                <div className={styles.smsError}>
+                  <small>{smsError}</small>
+                </div>
+              )}
+              {!smsError && !smsLoading && (
+                <div className={styles.smsTimestamp}>
+                  <small>As of {new Date().toLocaleTimeString('en-PH', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    timeZone: 'Asia/Manila'
+                  })}</small>
+                </div>
+              )}
             </div>
           </DashboardCard>
         </div>

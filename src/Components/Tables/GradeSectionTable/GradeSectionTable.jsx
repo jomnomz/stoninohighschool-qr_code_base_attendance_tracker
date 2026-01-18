@@ -86,8 +86,6 @@ const GradeSectionTable = ({
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching grade sections...');
-      
       // Fetch all grades for dropdown
       const { data: allGrades, error: gradesError } = await supabase
         .from('grades')
@@ -98,8 +96,6 @@ const GradeSectionTable = ({
         console.error('❌ Error fetching grades:', gradesError);
         throw gradesError;
       }
-      
-      console.log('✅ Fetched grades:', allGrades);
       
       // Fetch sections with grade information
       const { data, error } = await supabase
@@ -116,8 +112,6 @@ const GradeSectionTable = ({
         throw error;
       }
       
-      console.log('✅ Raw sections data:', data);
-      
       setGrades(allGrades || []);
       
       // Transform data to flatten structure
@@ -131,11 +125,8 @@ const GradeSectionTable = ({
         room_id: item.room_id
       }));
       
-      console.log('✅ Transformed data:', transformedData);
-      
       // Sort the data numerically by grade
       const sortedData = sortGradeSections(transformedData);
-      console.log('✅ Sorted data:', sortedData);
       
       setGradeSections(sortedData);
       
@@ -151,7 +142,6 @@ const GradeSectionTable = ({
   
   // Edit functions
   const startEdit = (gradeSection) => {
-    console.log('✏️ Starting edit for grade section:', gradeSection);
     setEditingId(gradeSection.id);
     setValidationErrors({});
     
@@ -162,14 +152,12 @@ const GradeSectionTable = ({
   };
 
   const cancelEdit = () => {
-    console.log('❌ Canceling edit');
     setEditingId(null);
     setEditFormData({});
     setValidationErrors({});
   };
 
   const updateEditField = (field, value) => {
-    console.log(`📝 Updating field ${field}: ${value}`);
     setEditFormData(prev => ({
       ...prev,
       [field]: value
@@ -199,7 +187,6 @@ const GradeSectionTable = ({
       errors.section = 'Section name must be 50 characters or less';
     }
     
-    console.log('✅ Validation errors:', errors);
     return errors;
   };
 
@@ -207,16 +194,12 @@ const GradeSectionTable = ({
   const handleSaveEdit = async (gradeSectionId, e) => {
     if (e) e.stopPropagation();
     
-    console.log('💾 Saving edit for grade section:', gradeSectionId);
-    console.log('📋 Edit form data:', editFormData);
-    
     try {
       setSaving(true);
       
       // Validate form data
       const errors = validateForm();
       if (Object.keys(errors).length > 0) {
-        console.log('❌ Validation failed:', errors);
         setValidationErrors(errors);
         toastError('Please fix the validation errors');
         return { success: false };
@@ -226,8 +209,6 @@ const GradeSectionTable = ({
       const selectedGrade = grades.find(g => 
         g.grade_level.toString() === editFormData.grade
       );
-      
-      console.log('🔍 Selected grade:', selectedGrade);
       
       if (!selectedGrade) {
         throw new Error(`Grade ${editFormData.grade} not found`);
@@ -240,8 +221,6 @@ const GradeSectionTable = ({
         updated_at: new Date().toISOString()
       };
       
-      console.log('📤 Update data:', { id: gradeSectionId, ...updateData });
-      
       // Try direct supabase update first to see errors
       const { data: updatedSection, error: updateError } = await supabase
         .from('sections')
@@ -251,8 +230,6 @@ const GradeSectionTable = ({
         .single();
       
       if (updateError) {
-        console.error('❌ Supabase update error:', updateError);
-        
         // Check for unique constraint violation
         if (updateError.code === '23505') {
           if (updateError.message.includes('sections_grade_id_section_name_key')) {
@@ -264,8 +241,6 @@ const GradeSectionTable = ({
         
         throw new Error(updateError.message || 'Failed to update grade section');
       }
-      
-      console.log('✅ Database update successful:', updatedSection);
       
       // Update local state with the returned data
       setGradeSections(prevSections => {
@@ -284,7 +259,6 @@ const GradeSectionTable = ({
           return section;
         });
         
-        console.log('🔄 Updated local state:', updatedSections);
         return updatedSections;
       });
       
@@ -521,6 +495,80 @@ const GradeSectionTable = ({
     return `Showing ${sectionCount} grade section/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
   };
 
+  // Render regular row (only shows when NOT expanded)
+  const renderRegularRow = (gradeSection, rowColorClass, visibleRowIndex, isSelected) => {
+    const isEditing = editingId === gradeSection.id;
+    
+    return (
+      <tr 
+        key={gradeSection.id}
+        className={`${styles.gradeSectionRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
+        onClick={() => toggleRow(gradeSection.id)}
+      >
+        <td>
+          <div className={styles.icon} onClick={(e) => handleGradeSectionSelect(gradeSection.id, e)}>
+            <FontAwesomeIcon 
+              icon={isSelected ? fasCircle : farCircleRegular} 
+              style={{ 
+                cursor: 'pointer', 
+                color: isSelected ? '#007bff' : '' 
+              }}
+            />
+          </div>
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <select
+              value={editFormData.grade || ''}
+              onChange={(e) => updateEditField('grade', e.target.value)}
+              className={`${styles.editSelect} ${validationErrors.grade ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Select Grade</option>
+              {grades.map(grade => (
+                <option key={grade.id} value={grade.grade_level}>
+                  Grade {grade.grade_level}
+                </option>
+              ))}
+            </select>
+          ) : (
+            `Grade ${gradeSection.grade}`
+          )}
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editFormData.section || ''}
+              onChange={(e) => updateEditField('section', e.target.value)}
+              className={`${styles.editInput} ${validationErrors.section ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Section name"
+            />
+          ) : (
+            gradeSection.section
+          )}
+        </td>
+        
+        <td>
+          {renderEditCell(gradeSection)}
+        </td>
+        
+        <td>
+          <div className={styles.icon}>
+            <FontAwesomeIcon 
+              icon={faTrashCan} 
+              className="action-button"
+              onClick={(e) => handleDeleteClick(gradeSection, e)}
+            />
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className={styles.gradeSectionTableContainer} ref={tableRef}>
       {/* Table info */}
@@ -558,85 +606,24 @@ const GradeSectionTable = ({
               </tr>
             ) : (
               filteredGradeSections.map((gradeSection, index) => {
-                const isExpanded = isRowExpanded(gradeSection.id);
-                const isEditing = editingId === gradeSection.id;
-                const isSelected = selectedGradeSections.includes(gradeSection.id);
-                const rowColorClass = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const visibleRowIndex = filteredGradeSections
+                  .slice(0, index)
+                  .filter(s => !isRowExpanded(s.id))
+                  .length;
                 
+                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const isSelected = selectedGradeSections.includes(gradeSection.id);
+
                 return (
                   <React.Fragment key={gradeSection.id}>
-                    {/* MAIN ROW - Always visible */}
-                    <tr 
-                      className={`${styles.gradeSectionRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-                      onClick={() => toggleRow(gradeSection.id)}
-                    >
-                      <td>
-                        <div className={styles.icon} onClick={(e) => handleGradeSectionSelect(gradeSection.id, e)}>
-                          <FontAwesomeIcon 
-                            icon={isSelected ? fasCircle : farCircleRegular} 
-                            style={{ 
-                              cursor: 'pointer', 
-                              color: isSelected ? '#007bff' : '' 
-                            }}
-                          />
-                        </div>
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <select
-                            value={editFormData.grade || ''}
-                            onChange={(e) => updateEditField('grade', e.target.value)}
-                            className={`${styles.editSelect} ${validationErrors.grade ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <option value="">Select Grade</option>
-                            {grades.map(grade => (
-                              <option key={grade.id} value={grade.grade_level}>
-                                Grade {grade.grade_level}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          `Grade ${gradeSection.grade}`
-                        )}
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editFormData.section || ''}
-                            onChange={(e) => updateEditField('section', e.target.value)}
-                            className={`${styles.editInput} ${validationErrors.section ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                            placeholder="Section name"
-                          />
-                        ) : (
-                          gradeSection.section
-                        )}
-                      </td>
-                      
-                      <td>
-                        {renderEditCell(gradeSection)}
-                      </td>
-                      
-                      <td>
-                        <div className={styles.icon}>
-                          <FontAwesomeIcon 
-                            icon={faTrashCan} 
-                            className="action-button"
-                            onClick={(e) => handleDeleteClick(gradeSection, e)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    {/* EXPANDED ROW - Only when expanded */}
-                    {isExpanded && renderExpandedRow(gradeSection)}
-                    
+                    {/* Only show regular row if NOT expanded */}
+                    {!isRowExpanded(gradeSection.id) && (
+                      renderRegularRow(gradeSection, rowColorClass, visibleRowIndex, isSelected)
+                    )}
+                    {/* Always render expanded row (it will be hidden if not active) */}
+                    {renderExpandedRow(gradeSection)}
                     {/* ERROR ROW - Only when editing has errors */}
-                    {isEditing && Object.keys(validationErrors).length > 0 && (
+                    {editingId === gradeSection.id && Object.keys(validationErrors).length > 0 && (
                       <tr className={styles.errorRow}>
                         <td colSpan="5" className={styles.errorMessages}>
                           {Object.values(validationErrors).map((error, idx) => (

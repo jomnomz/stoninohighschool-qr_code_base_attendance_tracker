@@ -309,6 +309,74 @@ const SubjectTable = ({
     return `Showing ${subjectCount} subject/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
   };
 
+  // Render regular row (only shows when NOT expanded)
+  const renderRegularRow = (subject, rowColorClass, visibleRowIndex, isSelected) => {
+    const isEditing = editingId === subject.id;
+    
+    return (
+      <tr 
+        key={subject.id}
+        className={`${styles.subjectRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
+        onClick={() => toggleRow(subject.id)}
+      >
+        <td>
+          <div className={styles.icon} onClick={(e) => handleSubjectSelect(subject.id, e)}>
+            <FontAwesomeIcon 
+              icon={isSelected ? fasCircle : farCircleRegular} 
+              style={{ 
+                cursor: 'pointer', 
+                color: isSelected ? '#007bff' : '' 
+              }}
+            />
+          </div>
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editFormData.subject_code || ''}
+              onChange={(e) => updateEditField('subject_code', e.target.value.toUpperCase())}
+              className={`${styles.editInput} ${validationErrors.subject_code ? styles.errorInput : ''}`}
+              style={{ textTransform: 'uppercase' }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            subject.subject_code
+          )}
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <input
+              type="text"
+              value={editFormData.subject_name || ''}
+              onChange={(e) => updateEditField('subject_name', e.target.value)}
+              className={`${styles.editInput} ${validationErrors.subject_name ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            subject.subject_name
+          )}
+        </td>
+        
+        <td>
+          {renderEditCell(subject)}
+        </td>
+        
+        <td>
+          <div className={styles.icon}>
+            <FontAwesomeIcon 
+              icon={faTrashCan} 
+              className="action-button"
+              onClick={(e) => handleDeleteClick(subject, e)}
+            />
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className={styles.subjectTableContainer} ref={tableRef}>
       {/* Table info similar to other tables */}
@@ -346,79 +414,24 @@ const SubjectTable = ({
               </tr>
             ) : (
               filteredSubjects.map((subject, index) => {
-                const isExpanded = isRowExpanded(subject.id);
-                const isEditing = editingId === subject.id;
-                const isSelected = selectedSubjects.includes(subject.id);
-                const rowColorClass = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const visibleRowIndex = filteredSubjects
+                  .slice(0, index)
+                  .filter(s => !isRowExpanded(s.id))
+                  .length;
                 
+                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const isSelected = selectedSubjects.includes(subject.id);
+
                 return (
                   <React.Fragment key={subject.id}>
-                    {/* MAIN ROW - Always visible */}
-                    <tr 
-                      className={`${styles.subjectRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-                      onClick={() => toggleRow(subject.id)}
-                    >
-                      <td>
-                        <div className={styles.icon} onClick={(e) => handleSubjectSelect(subject.id, e)}>
-                          <FontAwesomeIcon 
-                            icon={isSelected ? fasCircle : farCircleRegular} 
-                            style={{ 
-                              cursor: 'pointer', 
-                              color: isSelected ? '#007bff' : '' 
-                            }}
-                          />
-                        </div>
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editFormData.subject_code || ''}
-                            onChange={(e) => updateEditField('subject_code', e.target.value.toUpperCase())}
-                            className={`${styles.editInput} ${validationErrors.subject_code ? styles.errorInput : ''}`}
-                            style={{ textTransform: 'uppercase' }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          subject.subject_code
-                        )}
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editFormData.subject_name || ''}
-                            onChange={(e) => updateEditField('subject_name', e.target.value)}
-                            className={`${styles.editInput} ${validationErrors.subject_name ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          subject.subject_name
-                        )}
-                      </td>
-                      
-                      <td>
-                        {renderEditCell(subject)}
-                      </td>
-                      
-                      <td>
-                        <div className={styles.icon}>
-                          <FontAwesomeIcon 
-                            icon={faTrashCan} 
-                            className="action-button"
-                            onClick={(e) => handleDeleteClick(subject, e)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    {/* EXPANDED ROW - Only when expanded */}
-                    {isExpanded && renderExpandedRow(subject)}
-                    
+                    {/* Only show regular row if NOT expanded */}
+                    {!isRowExpanded(subject.id) && (
+                      renderRegularRow(subject, rowColorClass, visibleRowIndex, isSelected)
+                    )}
+                    {/* Always render expanded row (it will be hidden if not active) */}
+                    {renderExpandedRow(subject)}
                     {/* ERROR ROW - Only when editing has errors */}
-                    {isEditing && Object.keys(validationErrors).length > 0 && (
+                    {editingId === subject.id && Object.keys(validationErrors).length > 0 && (
                       <tr className={styles.errorRow}>
                         <td colSpan="5" className={styles.errorMessages}>
                           {Object.values(validationErrors).map((error, idx) => (

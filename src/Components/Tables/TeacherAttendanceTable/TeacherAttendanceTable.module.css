@@ -101,6 +101,11 @@
   box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.1);
 }
 
+.dateSelectorContainer {
+  display: flex;
+  align-items: center;
+}
+
 .dateSelector {
   display: flex;
   align-items: center;
@@ -243,7 +248,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: auto;
-  min-width: 1000px;
+  min-width: 900px;
   position: absolute;
   top: 0;
   left: 0;
@@ -265,9 +270,10 @@
   box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
+/* Centered table headers */
 .attendanceTable th {
   padding: 16px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #495057;
   border-bottom: 2px solid #dee2e6;
@@ -276,11 +282,13 @@
   letter-spacing: 0.5px;
 }
 
+/* Centered table cells */
 .attendanceTable td {
   padding: 16px;
   border-bottom: 1px solid #e9ecef;
   font-size: 14px;
   vertical-align: middle;
+  text-align: center;
 }
 
 .attendanceTable tbody tr:last-child td {
@@ -310,13 +318,6 @@
   width: 120px;
   min-width: 120px;
   max-width: 120px;
-}
-
-.editColumn, .editCell {
-  width: 80px;
-  min-width: 80px;
-  max-width: 80px;
-  text-align: center;
 }
 
 /* Row styling */
@@ -359,31 +360,6 @@
 .statusAbsent {
   background-color: #ffe3e3;
   color: #c92a2a;
-}
-
-/* Edit button */
-.editButton {
-  background: none;
-  border: none;
-  color: #4dabf7;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-}
-
-.editButton:hover {
-  background-color: #e7f5ff;
-  transform: scale(1.1);
-}
-
-.editButton:active {
-  transform: scale(0.95);
 }
 
 /* No data */
@@ -454,7 +430,7 @@
 }
 
 /* Cell specific styles */
-.lrnCell, .nameCell, .timeCell, .statusCell, .editCell {
+.lrnCell, .nameCell, .timeCell, .statusCell {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

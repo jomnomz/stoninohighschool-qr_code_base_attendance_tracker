@@ -38,11 +38,11 @@ function NavBar({ userType = 'admin', onCollapseChange }) {
       { path: '/dashboard', icon: <DashboardIcon />, label: 'Dashboard', type: 'mui' },
       { path: '/students', icon: faUsers, label: 'Students', type: 'fa' },
       { path: '/guardians', icon: <FamilyRestroomIcon />, label: 'Guardians', type: 'mui' },
-      { path: '/messages', icon: <MessageIcon />, label: 'Messages', type: 'mui' },
+      { path: '/messages', icon: <MessageIcon />, label: 'Notifications', type: 'mui' },
       { path: '/attendance', icon: <AssignmentTurnedInIcon />, label: 'Attendance', type: 'mui' },
       { path: '/masterData', icon: <TableChartIcon />, label: 'Master Data', type: 'mui' },
       { path: '/teachers', icon: faChalkboardUser, label: 'Teachers', type: 'fa' },
-      { path: '/reports', icon: <AssignmentIcon />, label: 'Reports', type: 'mui' },
+      // { path: '/reports', icon: <AssignmentIcon />, label: 'Reports', type: 'mui' },
       { path: '/settings', icon: <SettingsIcon />, label: 'Settings', type: 'mui' }
     ],
     teacher: [

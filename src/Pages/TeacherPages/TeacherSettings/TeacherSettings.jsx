@@ -8,6 +8,7 @@ import { supabase } from '../../../lib/supabase.js';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../../Components/Authentication/AuthProvider/AuthProvider.jsx';
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx';
+import Chatbot from '../../../Components/Forms/Chatbot/Chatbot.jsx';
 
 function TeacherSettings() {
   const navigate = useNavigate();
@@ -81,22 +82,33 @@ function TeacherSettings() {
         label="Settings"
       />
       
-      <div className={styles.section}>
-        <h3>Change Password</h3>
-        <ChangePasswordForm 
-          onChangePassword={handlePasswordChange}
-          loading={changingPassword}
-        />
-      </div>  
-      
-      <div className={styles.section}>
-        <h3>Account Actions</h3>
-        <Button 
-          label="Logout" 
-          onClick={handleLogout}
-          color="danger"
-          width="100%"
-        />
+      <div className={styles.contentWrapper}>
+        <div className={styles.settingsColumn}>
+          <div className={styles.section}>
+            <h3>Change Password</h3>
+            <ChangePasswordForm 
+              onChangePassword={handlePasswordChange}
+              loading={changingPassword}
+            />
+          </div>  
+          
+          <div className={styles.section}>
+            <h3>Account Actions</h3>
+            <Button 
+              label="Logout" 
+              onClick={handleLogout}
+              color="danger"
+              width="100%"
+            />
+          </div>
+        </div>
+        
+        <div className={styles.chatbotColumn}>
+          <div className={styles.section}>
+            <h3>AI Assistant</h3>
+            <Chatbot />
+          </div>
+        </div>
       </div>
     </main>
   );

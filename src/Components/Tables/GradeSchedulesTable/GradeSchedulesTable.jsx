@@ -562,6 +562,113 @@ const GradeSchedulesTable = ({
     return `Showing ${scheduleCount} grade schedule/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
   };
 
+  // Render regular row (only shows when NOT expanded)
+  const renderRegularRow = (schedule, rowColorClass, visibleRowIndex, isSelected) => {
+    const isEditing = editingId === schedule.id;
+    
+    return (
+      <tr 
+        key={schedule.id}
+        className={`${styles.scheduleRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
+        onClick={() => toggleRow(schedule.id)}
+      >
+        <td>
+          <div className={styles.icon} onClick={(e) => handleScheduleSelect(schedule.id, e)}>
+            <FontAwesomeIcon 
+              icon={isSelected ? fasCircle : farCircleRegular} 
+              style={{ 
+                cursor: 'pointer', 
+                color: isSelected ? '#007bff' : '' 
+              }}
+            />
+          </div>
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <select
+              value={editFormData.grade_level || ''}
+              onChange={(e) => updateEditField('grade_level', e.target.value)}
+              className={`${styles.editSelect} ${validationErrors.grade_level ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Select Grade</option>
+              {grades.map(grade => (
+                <option key={grade.id} value={grade.grade_level}>
+                  Grade {grade.grade_level}
+                </option>
+              ))}
+            </select>
+          ) : (
+            `Grade ${schedule.grade_level}`
+          )}
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <input
+              type="time"
+              value={editFormData.class_start || ''}
+              onChange={(e) => updateEditField('class_start', e.target.value)}
+              className={`${styles.editInput} ${validationErrors.class_start ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            formatTimeAMPM(schedule.class_start)
+          )}
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <input
+              type="time"
+              value={editFormData.class_end || ''}
+              onChange={(e) => updateEditField('class_end', e.target.value)}
+              className={`${styles.editInput} ${validationErrors.class_end ? styles.errorInput : ''}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            formatTimeAMPM(schedule.class_end)
+          )}
+        </td>
+        
+        <td>
+          {isEditing ? (
+            <div className={styles.graceInputContainer}>
+              <input
+                type="number"
+                min="0"
+                max="120"
+                step="5"
+                value={editFormData.grace_period_minutes || '15'}
+                onChange={(e) => updateEditField('grace_period_minutes', e.target.value)}
+                className={`${styles.editInput} ${styles.graceInput} ${validationErrors.grace_period_minutes ? styles.errorInput : ''}`}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <span className={styles.graceUnit}>minutes</span>
+            </div>
+          ) : (
+            formatDuration(schedule.grace_period_minutes || 15)
+          )}
+        </td>
+        
+        <td>
+          {renderEditCell(schedule)}
+        </td>
+        
+        <td>
+          <div className={styles.icon}>
+            <FontAwesomeIcon 
+              icon={faTrashCan} 
+              className="action-button"
+              onClick={(e) => handleDeleteClick(schedule, e)}
+            />
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
   return (
     <div className={styles.scheduleTableContainer} ref={tableRef}>
       {/* Table info */}
@@ -601,118 +708,24 @@ const GradeSchedulesTable = ({
               </tr>
             ) : (
               filteredSchedules.map((schedule, index) => {
-                const isExpanded = isRowExpanded(schedule.id);
-                const isEditing = editingId === schedule.id;
-                const isSelected = selectedSchedules.includes(schedule.id);
-                const rowColorClass = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const visibleRowIndex = filteredSchedules
+                  .slice(0, index)
+                  .filter(s => !isRowExpanded(s.id))
+                  .length;
                 
+                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
+                const isSelected = selectedSchedules.includes(schedule.id);
+
                 return (
                   <React.Fragment key={schedule.id}>
-                    {/* MAIN ROW - Always visible */}
-                    <tr 
-                      className={`${styles.scheduleRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-                      onClick={() => toggleRow(schedule.id)}
-                    >
-                      <td>
-                        <div className={styles.icon} onClick={(e) => handleScheduleSelect(schedule.id, e)}>
-                          <FontAwesomeIcon 
-                            icon={isSelected ? fasCircle : farCircleRegular} 
-                            style={{ 
-                              cursor: 'pointer', 
-                              color: isSelected ? '#007bff' : '' 
-                            }}
-                          />
-                        </div>
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <select
-                            value={editFormData.grade_level || ''}
-                            onChange={(e) => updateEditField('grade_level', e.target.value)}
-                            className={`${styles.editSelect} ${validationErrors.grade_level ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <option value="">Select Grade</option>
-                            {grades.map(grade => (
-                              <option key={grade.id} value={grade.grade_level}>
-                                Grade {grade.grade_level}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          `Grade ${schedule.grade_level}`
-                        )}
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <input
-                            type="time"
-                            value={editFormData.class_start || ''}
-                            onChange={(e) => updateEditField('class_start', e.target.value)}
-                            className={`${styles.editInput} ${validationErrors.class_start ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          formatTimeAMPM(schedule.class_start)
-                        )}
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <input
-                            type="time"
-                            value={editFormData.class_end || ''}
-                            onChange={(e) => updateEditField('class_end', e.target.value)}
-                            className={`${styles.editInput} ${validationErrors.class_end ? styles.errorInput : ''}`}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          formatTimeAMPM(schedule.class_end)
-                        )}
-                      </td>
-                      
-                      <td>
-                        {isEditing ? (
-                          <div className={styles.graceInputContainer}>
-                            <input
-                              type="number"
-                              min="0"
-                              max="120"
-                              step="5"
-                              value={editFormData.grace_period_minutes || '15'}
-                              onChange={(e) => updateEditField('grace_period_minutes', e.target.value)}
-                              className={`${styles.editInput} ${styles.graceInput} ${validationErrors.grace_period_minutes ? styles.errorInput : ''}`}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <span className={styles.graceUnit}>minutes</span>
-                          </div>
-                        ) : (
-                          formatDuration(schedule.grace_period_minutes || 15)
-                        )}
-                      </td>
-                      
-                      <td>
-                        {renderEditCell(schedule)}
-                      </td>
-                      
-                      <td>
-                        <div className={styles.icon}>
-                          <FontAwesomeIcon 
-                            icon={faTrashCan} 
-                            className="action-button"
-                            onClick={(e) => handleDeleteClick(schedule, e)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    {/* EXPANDED ROW - Only when expanded */}
-                    {isExpanded && renderExpandedRow(schedule)}
-                    
+                    {/* Only show regular row if NOT expanded */}
+                    {!isRowExpanded(schedule.id) && (
+                      renderRegularRow(schedule, rowColorClass, visibleRowIndex, isSelected)
+                    )}
+                    {/* Always render expanded row (it will be hidden if not active) */}
+                    {renderExpandedRow(schedule)}
                     {/* ERROR ROW - Only when editing has errors */}
-                    {isEditing && Object.keys(validationErrors).length > 0 && (
+                    {editingId === schedule.id && Object.keys(validationErrors).length > 0 && (
                       <tr className={styles.errorRow}>
                         <td colSpan="7" className={styles.errorMessages}>
                           {Object.values(validationErrors).map((error, idx) => (

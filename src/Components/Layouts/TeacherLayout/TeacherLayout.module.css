@@ -1,3 +1,8 @@
-.mainContent{
+.mainContent {
   margin-left: 30px;
+  width: calc(100% - 30px);
+  box-sizing: border-box;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
+

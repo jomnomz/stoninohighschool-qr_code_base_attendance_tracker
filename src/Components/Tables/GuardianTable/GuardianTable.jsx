@@ -4,12 +4,12 @@ import { useRowExpansion } from '../../Hooks/useRowExpansion';
 import { grades } from '../../../Utils/TableHelpers';
 import { formatNA } from '../../../Utils/Formatters';
 import { sortGuardians } from '../../../Utils/SortEntities'; 
-import Button from '../../UI/Buttons/Button/Button';
 import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import styles from './GuardianTable.module.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from '../../../lib/supabase'; 
+import Table from '../Table/Table.jsx';
 
 const GuardianTable = ({
   searchTerm = '',
@@ -285,40 +285,36 @@ const GuardianTable = ({
     );
   };
 
-  const renderExpandedRow = (guardian) => (
-    <tr className={`${styles.expandRow} ${isRowExpanded(guardian.id) ? styles.expandRowActive : ''}`}>
-      <td colSpan="7">
-        <div 
-          className={`${styles.guardianCard} ${styles.expandableCard}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={styles.guardianHeader}>
-            {guardian.first_name} {guardian.last_name}
-          </div>
-          <div className={styles.guardianInfo}>
-            <strong>Guardian Details</strong>
-          </div>
-          <div className={styles.guardianInfo}>
-            Full Name: {guardian.first_name} {guardian.middle_name} {guardian.last_name}
-          </div>
-          <div className={styles.guardianInfo}>
-            Guardian Of: {guardian.guardian_of}
-          </div>
-          <div className={styles.guardianInfo}>
-            Student LRN: {guardian.student_lrn || 'N/A'}
-          </div>
-          <div className={styles.guardianInfo}>
-            Grade and Section: {guardian.grade} - {guardian.section}
-          </div>
-          <div className={styles.guardianInfo}>
-            Email: {formatNA(guardian.email)}
-          </div>
-          <div className={styles.guardianInfo}>
-            Phone: {formatNA(guardian.phone_number)}
-          </div>
-        </div>
-      </td>
-    </tr>
+  const renderExpandedContent = (guardian) => (
+    <div 
+      className={`${styles.guardianCard} ${styles.expandableCard}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className={styles.guardianHeader}>
+        {guardian.first_name} {guardian.last_name}
+      </div>
+      <div className={styles.guardianInfo}>
+        <strong>Guardian Details</strong>
+      </div>
+      <div className={styles.guardianInfo}>
+        Full Name: {guardian.first_name} {guardian.middle_name} {guardian.last_name}
+      </div>
+      <div className={styles.guardianInfo}>
+        Guardian Of: {guardian.guardian_of}
+      </div>
+      <div className={styles.guardianInfo}>
+        Student LRN: {guardian.student_lrn || 'N/A'}
+      </div>
+      <div className={styles.guardianInfo}>
+        Grade and Section: {guardian.grade} - {guardian.section}
+      </div>
+      <div className={styles.guardianInfo}>
+        Email: {formatNA(guardian.email)}
+      </div>
+      <div className={styles.guardianInfo}>
+        Phone: {formatNA(guardian.phone_number)}
+      </div>
+    </div>
   );
 
   const renderEditCell = (guardian) => (
@@ -373,124 +369,105 @@ const GuardianTable = ({
     return message;
   };
 
-  if (parentLoading || loading) {
-    return (
-      <div className={styles.guardianTableContainer}>
-        <div className={styles.loading}>Loading guardians...</div>
-      </div>
-    );
-  }
+  const getVisibleRowClassName = useMemo(() => {
+    return ({ row, rowIndex }) => {
+      const visibleRowIndex = sortedGuardians
+        .slice(0, rowIndex)
+        .filter(guardian => !isRowExpanded(guardian.id))
+        .length;
 
-  if (error) {
-    return (
-      <div className={styles.guardianTableContainer}>
-        <div className={styles.error}>Error: {error}</div>
-      </div>
-    );
-  }
+      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
 
-  return (
-    <div className={styles.guardianTableContainer} ref={tableRef}>
-      <div className={styles.guardianTable}>
-        <div className={styles.classContainers}>
-          <Button 
-            label="All"
-            tabBottom={true}
-            height="xs"
-            width="xs-sm"
-            color="grades"
-            active={currentClass === 'all'}
-            onClick={() => handleClassChange('all')}
-          >
-            All
-          </Button>
-          
-          {grades.map(grade => (
-            <Button 
-              key={grade}
-              label={`Grade ${grade}`}
-              tabBottom={true}
-              height="xs"
-              width="xs-sm"
-              color="grades"
-              active={currentClass === grade}
-              onClick={() => handleClassChange(grade)}
-            >
-              Grade {grade}
-            </Button>
-          ))}
+      return [
+        styles.guardianRow,
+        rowColorClass,
+        editingId === row.id ? styles.editingRow : ''
+      ].filter(Boolean).join(' ');
+    };
+  }, [sortedGuardians, isRowExpanded, editingId]);
 
-          <div className={styles.tableInfo}>
-            <p>{getTableInfoMessage()}</p>
+  const tableColumns = useMemo(() => [
+    {
+      key: 'first_name',
+      label: 'FIRST NAME',
+      renderCell: ({ row }) => renderEditField(row, 'first_name')
+    },
+    {
+      key: 'last_name',
+      label: 'LAST NAME',
+      renderCell: ({ row }) => renderEditField(row, 'last_name')
+    },
+    {
+      key: 'guardian_of',
+      label: 'GUARDIAN OF',
+      renderCell: ({ row }) => row.guardian_of
+    },
+    {
+      key: 'grade',
+      label: 'GRADE',
+      renderCell: ({ row }) => row.grade
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      renderHeader: () => (
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderRow}>
+            <span>SECTION</span>
+            <SectionDropdown 
+              availableSections={sectionsToShowInDropdown}
+              selectedValue={selectedSection}
+              onSelect={handleSectionFilter}
+            />
           </div>
         </div>
+      ),
+      renderCell: ({ row }) => row.section
+    },
+    {
+      key: 'phone_number',
+      label: 'PHONE NO.',
+      renderCell: ({ row }) => renderEditField(row, 'phone_number')
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      renderCell: ({ row }) => renderEditCell(row)
+    }
+  ], [sectionsToShowInDropdown, selectedSection, renderEditCell, renderEditField]);
 
-        <div className={styles.tableWrapper}>
-          <table className={styles.guardiansTable}>
-            <thead>
-              <tr>
-                <th>FIRST NAME</th>
-                <th>LAST NAME</th>
-                <th>GUARDIAN OF</th>
-                <th>GRADE</th>
-                <th>
-                  <div className={styles.sectionHeader}>
-                    <div className={styles.sectionHeaderRow}>
-                      <span>SECTION</span>
-                      <SectionDropdown 
-                        availableSections={sectionsToShowInDropdown}  // Changed from allUniqueSections
-                        selectedValue={selectedSection}
-                        onSelect={handleSectionFilter}
-                      />
-                    </div>
-                  </div>
-                </th>
-                <th>PHONE NO.</th>
-                <th>EDIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedGuardians.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className={styles.noGuardian}>
-                    {getTableInfoMessage()}
-                  </td>
-                </tr>
-              ) : (
-                sortedGuardians.map((guardian, index) => {
-                  const visibleRowIndex = sortedGuardians
-                    .slice(0, index)
-                    .filter(g => !isRowExpanded(g.id))
-                    .length;
-                  
-                  const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                  
-                  return (
-                    <React.Fragment key={guardian.id}>
-                      {!isRowExpanded(guardian.id) && (
-                        <tr 
-                          className={`${styles.guardianRow} ${rowColorClass} ${editingId === guardian.id ? styles.editingRow : ''}`}
-                          onClick={(e) => handleRowClick(guardian.id, e)}
-                        >
-                          <td>{renderEditField(guardian, 'first_name')}</td>
-                          <td>{renderEditField(guardian, 'last_name')}</td>
-                          <td>{guardian.guardian_of}</td>
-                          <td>{guardian.grade}</td>
-                          <td>{guardian.section}</td>
-                          <td>{renderEditField(guardian, 'phone_number')}</td>
-                          <td>{renderEditCell(guardian)}</td>
-                        </tr>
-                      )}
-                      {renderExpandedRow(guardian)}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  return (
+    <Table
+      columns={tableColumns}
+      rows={sortedGuardians}
+      getRowId={(row) => row.id}
+      loading={parentLoading || loading}
+      error={error ? `Error: ${error}` : ''}
+      emptyMessage={getTableInfoMessage()}
+      containerRef={tableRef}
+      gradeTabs={{
+        options: grades,
+        currentValue: currentClass,
+        onChange: handleClassChange,
+        showAll: true,
+        allLabel: 'All',
+        renderLabel: (grade) => `Grade ${grade}`
+      }}
+      infoText={getTableInfoMessage()}
+      tableLabel="Guardians"
+      onRowClick={({ rowId, event }) => handleRowClick(rowId, event)}
+      rowClassName={getVisibleRowClassName}
+      expandedRowId={expandedRow}
+      renderExpandedRow={({ row }) => renderExpandedContent(row)}
+      expandedRowColSpan={7}
+      persistExpandedRows={true}
+      hideMainRowWhenExpanded={true}
+      getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+      striped={false}
+      noDataColSpan={7}
+      className={styles.guardianTableContainer}
+      wrapperClassName={styles.tableWrapper}
+    />
   );
 };
 

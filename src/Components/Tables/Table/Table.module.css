@@ -34,33 +34,33 @@
 .gradeTabs {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
 	flex-wrap: wrap;
 }
 
 .gradeTab {
-	border: 1px solid #c8d3e0;
-	border-radius: 999px;
-	padding: 7px 14px;
+	border: none;
+	border-radius: 0;
+	padding: 6px 14px;
 	font: inherit;
-	font-size: 0.86rem;
+	font-size: 0.95rem;
 	font-weight: 600;
-	color: #2c3b52;
-	background: #edf2f8;
+	color: #1f2937;
+	background: transparent;
 	cursor: pointer;
-	transition: all 0.2s ease;
+	border-bottom: 2px solid transparent;
+	transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .gradeTab:hover {
-	background: #e1e9f3;
-	border-color: #b8c6d8;
+	color: #0f6b58;
+	border-bottom-color: rgba(15, 107, 88, 0.55);
 }
 
 .gradeTabActive {
-	background: #0f6b58;
-	border-color: #0f6b58;
-	color: #ffffff;
-	box-shadow: 0 4px 10px rgba(15, 107, 88, 0.2);
+	background: transparent;
+	border-bottom-color: #0f6b58;
+	color: #0f6b58;
 }
 
 .infoText {

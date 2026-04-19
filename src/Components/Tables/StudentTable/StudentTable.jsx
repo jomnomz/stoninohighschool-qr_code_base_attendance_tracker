@@ -3,7 +3,6 @@ import { grades, shouldHandleRowClick } from '../../../Utils/TableHelpers';
 import { sortStudents } from '../../../Utils/SortEntities'; 
 import { compareSections } from '../../../Utils/CompareHelpers'; 
 import { formatStudentName, formatNA } from '../../../Utils/Formatters';
-import Button from '../../UI/Buttons/Button/Button';
 import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import QRCodeModal from '../../Modals/QRCodeModal/QRCodeModal';
 import QRCodeUpdateWarningModal from '../../Modals/QRCodeUpdateWarningModal/QRCodeUpdateWarningModal';
@@ -854,39 +853,6 @@ const StudentTable = ({
     renderEditCell
   ]);
 
-  const topContent = (
-    <>
-      <Button 
-        label="All"
-        line={true}
-        tabBottom={true}
-        height="xs"
-        width="xs-sm"
-        color="grades"
-        active={currentClass === 'all'}
-        onClick={() => handleClassChange('all')}
-      >
-        All
-      </Button>
-      
-      {grades.map(grade => (
-        <Button 
-          key={grade}
-          label={`Grade ${grade}`}
-          line={true}
-          tabBottom={true}
-          height="xs"
-          width="xs-sm"
-          color="grades"
-          active={currentClass === grade}
-          onClick={() => handleClassChange(grade)}
-        >
-          Grade {grade}
-        </Button>
-      ))}
-    </>
-  );
-
   return (
     <>
       <Table
@@ -897,12 +863,15 @@ const StudentTable = ({
         error={error ? `Error: ${error}` : ''}
         emptyMessage={getTableInfoMessage()}
         containerRef={tableRef}
-        renderTopContent={topContent}
-        headerContent={(
-          <div className={styles.tableInfo}>
-            <p>{getTableInfoMessage()}</p>
-          </div>
-        )}
+        gradeTabs={{
+          options: grades,
+          currentValue: currentClass,
+          onChange: handleClassChange,
+          showAll: true,
+          allLabel: 'All',
+          renderLabel: (grade) => `Grade ${grade}`
+        }}
+        infoText={getTableInfoMessage()}
         tableLabel="Students"
         onRowClick={({ rowId, event }) => handleRowClick(rowId, event)}
         rowClassName={getVisibleRowClassName}

@@ -2,13 +2,14 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  --table-content-width: 98%;
 }
 
 .tableWrapper {
-  max-height: 59vh;
+  max-height: 66vh;
   overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border: 1px solid #d8e1ec;
+  border-radius: 12px;
   width: 98%;
 }
 
@@ -22,9 +23,9 @@
 .tableWrapper thead th {
   position: sticky;
   top: 0;
-  background-color: #f2f2f2;
+  background: linear-gradient(180deg, #f6f9fd 0%, #eef3f9 100%);
   z-index: 10;
-  box-shadow: 0 1px 0 #e0e0e0;
+  box-shadow: 0 1px 0 #d8e1ec;
 }
 
 th {
@@ -48,20 +49,20 @@ tbody tr {
 }
 
 .rowEven {
-  background-color: white !important;
+  background-color: #ffffff !important;
 }
 
 .rowOdd {
-  background-color: #f2f2f2 !important;
+  background-color: #fbfdff !important;
 }
 
 .guardianRow:hover {
-  background-color: #8a8a8a !important;
+  background-color: #edf7f3 !important;
   cursor: pointer;
 }
 
 .guardianRow:hover td {
-  color: white;
+  color: #23344f;
 }
 
 .classContainers {
@@ -71,11 +72,12 @@ tbody tr {
 }
 
 .guardianCard {
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-color: #f7fafc;
+  border: 1px solid #dde5ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 35, 58, 0.08);
   text-align: left;
-  padding: 20px;
+  padding: 22px;
   cursor: default;
 }
 
@@ -160,13 +162,18 @@ tbody tr {
 .tableInfo {
   display: flex;
   flex-direction: column;
-  justify-content: end;
+  justify-content: center;
 }
 
 .tableInfo p {
   margin: 0;
-  font-weight: bold;
-  color: #003a02;
+  font-weight: 700;
+  color: #2f5d4f;
+  font-size: 0.92rem;
+  background: #e8f4ef;
+  border: 1px solid #cae6dd;
+  border-radius: 999px;
+  padding: 6px 12px;
 } 
 
 .icon {
@@ -178,11 +185,11 @@ tbody tr {
 
 .icon svg {
   transition: color 0.2s;
-  color: #6C757D;
+  color: #6a7788;
 }
 
 .icon svg:hover {
-  color: white;
+  color: #0f6b58;
 }
 
 .editInput {
@@ -326,11 +333,11 @@ tbody tr {
 }
 
 .selectedRow {
-  background-color: #e3f2fd !important;
+  background-color: #edf7f3 !important;
 }
 
 .selectedRow:hover {
-  background-color: #bbdefb !important;
+  background-color: #e2f1eb !important;
 }
 
 .errorRow {

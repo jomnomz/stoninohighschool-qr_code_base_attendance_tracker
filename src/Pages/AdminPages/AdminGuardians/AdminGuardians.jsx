@@ -123,10 +123,6 @@ function AdminGuardians() {
   return (
     <>
       <main className={styles.main}>
-        <PageLabel 
-          icon={<FamilyRestroomIcon sx={{ fontSize: 50, mb: -0.7 }} />}  
-          label="Guardians"
-        />
         <SectionLabel label="Guardian Records" />
         
         <div className={styles.top}>

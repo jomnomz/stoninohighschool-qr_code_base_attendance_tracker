@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from './Chatbot.module.css';
 import SendIcon from '@mui/icons-material/Send';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 function Chatbot() {
   const [messages, setMessages] = useState([
@@ -30,92 +31,29 @@ function Chatbot() {
     setIsLoading(true);
 
     try {
-      
-      const apiKey = "AIzaSyB7C1821Y9MQFi-v0fONGEm1TRgIbO5IRU"; 
-      
-      if (!apiKey || apiKey === "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") {
-        throw new Error('Please replace the placeholder API key with your actual Gemini API key');
-      }
-      
-      if (!apiKey.startsWith('AIza')) {
-        throw new Error('Invalid API key format. Gemini keys should start with "AIza"');
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro-latest' });
-
       const recentMessages = messages.slice(-4).map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
       }));
 
-      const systemPrompt = `You are an AI assistant for a QR Code Attendance Tracking System used in educational institutions.
-
-IMPORTANT SYSTEM CONTEXT:
-1. SYSTEM NAME: QR Code Attendance Tracking System
-2. USER ROLES: Admin, Teacher, Student
-3. KEY FEATURES:
-   - QR Code generation for classes/sessions
-   - Real-time attendance tracking
-   - Student check-in via QR code scanning
-   - Attendance reports and analytics
-   - Admin dashboard for management
-   - Teacher portal for class management
-
-4. COMMON ADMIN TASKS:
-   - Generate QR codes for classes
-   - Manage user accounts (teachers only)
-   - Reset passwords
-   - Create and upload Students/Teacher/MasterData excel files
-
-5. COMMON TEACHER TASKS:
-   - View student attendance that they hold
-   - View Stats and trends of students that they hold
-
-6. FREQUENTLY ASKED QUESTIONS:
-   Q: How do I add teachers, students, or masterdata into the website?
-   A: Go to their respective page and you will see a add student/teacher/masterdata class that will prompt you to add an excel file or a csv file.
-
-   Q: How do students check-in?
-   A: Students have their own QR code → Tap "Scan QR" → Automatic check-in or check-out.
-
-   Q: What if a student forgets to scan?
-   A: Teachers can manually edit attendance in the Class attendance section and wait for the admin to approve it.
-
-   Q: How many times can you scan a students QR Code?
-   A: Only 2 per day.
-
-RESPONSE GUIDELINES:
-- Be specific to THIS attendance tracking system
-- Provide step-by-step instructions when asked
-- If unsure about a feature, say "I'm not sure about that specific feature"
-- Refer to actual tabs/sections in the system
-- Keep answers concise but helpful
-- Don't make up features that don't exist
-
-Current user is likely an administrator or teacher in the Settings section.`;
-
-      const chat = model.startChat({
-        history: [
-          {
-            role: "user",
-            parts: [{ text: systemPrompt }]
-          },
-          {
-            role: "model",
-            parts: [{ text: "Understood. I'm the AI assistant for the QR Code Attendance Tracking System. I'll provide accurate information about QR code generation, attendance tracking, user management, reports, and all system features. I'll refer to the actual interface tabs and functionalities." }]
-          },
-          ...recentMessages
-        ],
-        generationConfig: {
-          maxOutputTokens: 800,
-          temperature: 0.3,
+      const response = await fetch(`${API_BASE_URL}/api/chatbot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
         },
+        body: JSON.stringify({
+          userMessage,
+          recentMessages
+        })
       });
 
-      const result = await chat.sendMessage(userMessage);
-      const response = await result.response;
-      const botMessage = response.text();
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Chat request failed');
+      }
+
+      const botMessage = data.message;
 
       setMessages(prev => [...prev, { text: botMessage, sender: 'bot' }]);
     } catch (error) {
@@ -123,12 +61,10 @@ Current user is likely an administrator or teacher in the Settings section.`;
       
       let errorMessage = "Sorry, I'm having trouble connecting. ";
       
-      if (error.message.includes('Please replace')) {
-        errorMessage += "Please replace the placeholder API key on line 48 with your actual Gemini API key from Google AI Studio.";
-      } else if (error.message.includes('Invalid API key')) {
-        errorMessage += "Invalid API key format. Make sure you copied the entire key correctly.";
+      if (error.message.includes('not configured')) {
+        errorMessage += "The AI assistant is not configured on the server.";
       } else if (error.message.includes('API key not valid') || error.message.includes('quota')) {
-        errorMessage += "API key issue. Check if your Gemini API key is valid and has quota remaining.";
+        errorMessage += "The server-side Gemini key is invalid or out of quota.";
       } else if (error.message.includes('Network Error')) {
         errorMessage += "Network error. Check your internet connection.";
       } else {

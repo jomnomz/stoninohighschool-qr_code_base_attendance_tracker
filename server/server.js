@@ -232,6 +232,134 @@ app.post('/api/test-iproig-sms', async (req, res) => {
   }
 });
 
+app.post('/api/chatbot', async (req, res) => {
+  try {
+    const { userMessage, recentMessages = [] } = req.body;
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: 'Gemini API is not configured on the server'
+      });
+    }
+
+    if (!userMessage || !userMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing user message'
+      });
+    }
+
+    const systemPrompt = `You are an AI assistant for a QR Code Attendance Tracking System used in educational institutions.
+
+IMPORTANT SYSTEM CONTEXT:
+1. SYSTEM NAME: QR Code Attendance Tracking System
+2. USER ROLES: Admin, Teacher, Student
+3. KEY FEATURES:
+   - QR Code generation for classes/sessions
+   - Real-time attendance tracking
+   - Student check-in via QR code scanning
+   - Attendance reports and analytics
+   - Admin dashboard for management
+   - Teacher portal for class management
+
+4. COMMON ADMIN TASKS:
+   - Generate QR codes for classes
+   - Manage user accounts (teachers only)
+   - Reset passwords
+   - Create and upload Students/Teacher/MasterData excel files
+
+5. COMMON TEACHER TASKS:
+   - View student attendance that they hold
+   - View stats and trends of students that they hold
+
+6. FREQUENTLY ASKED QUESTIONS:
+   Q: How do I add teachers, students, or masterdata into the website?
+   A: Go to their respective page and use the add student/teacher/masterdata flow to upload an Excel or CSV file.
+
+   Q: How do students check-in?
+   A: Students use their QR code and scan it for automatic check-in or check-out.
+
+   Q: What if a student forgets to scan?
+   A: Teachers can manually edit attendance in the class attendance section and wait for admin approval.
+
+   Q: How many times can you scan a student's QR code?
+   A: Only 2 per day.
+
+RESPONSE GUIDELINES:
+- Be specific to THIS attendance tracking system
+- Provide step-by-step instructions when asked
+- If unsure about a feature, say "I'm not sure about that specific feature"
+- Refer to actual tabs or sections in the system
+- Keep answers concise but helpful
+- Don't make up features that don't exist
+
+Current user is likely an administrator or teacher in the Settings section.`;
+
+    const contents = [
+      {
+        role: 'user',
+        parts: [{ text: systemPrompt }]
+      },
+      {
+        role: 'model',
+        parts: [{ text: "Understood. I'm the AI assistant for the QR Code Attendance Tracking System. I'll provide accurate information about QR code generation, attendance tracking, user management, reports, and all system features. I'll refer to the actual interface tabs and functionalities." }]
+      },
+      ...recentMessages,
+      {
+        role: 'user',
+        parts: [{ text: userMessage.trim() }]
+      }
+    ];
+
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 800
+          }
+        })
+      }
+    );
+
+    const geminiData = await geminiResponse.json();
+
+    if (!geminiResponse.ok) {
+      return res.status(geminiResponse.status).json({
+        success: false,
+        error: geminiData?.error?.message || 'Gemini request failed'
+      });
+    }
+
+    const message = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!message) {
+      return res.status(502).json({
+        success: false,
+        error: 'Gemini returned an empty response'
+      });
+    }
+
+    res.json({
+      success: true,
+      message
+    });
+  } catch (error) {
+    console.error('❌ Chatbot endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Chatbot request failed'
+    });
+  }
+});
+
 app.post('/api/webhooks/attendance', async (req, res) => {
   try {
     const { student_id, scan_type } = req.body;

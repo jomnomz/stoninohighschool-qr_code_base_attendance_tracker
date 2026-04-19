@@ -1,41 +1,17 @@
 import { useState } from 'react';
 import styles from './AdminSettings.module.css';
 import PageLabel from "../../../Components/UI/Labels/PageLabel/PageLabel.jsx";
-import Button from '../../../Components/UI/Buttons/Button/Button.jsx';
 import ChangePasswordForm from '../../../Components/Forms/ChangePasswordForm/ChangePasswordForm.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { supabase } from '../../../lib/supabase.js';
-import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../../Components/Authentication/AuthProvider/AuthProvider.jsx';
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx';
 import Chatbot from '../../../Components/Forms/Chatbot/Chatbot.jsx';
 
 function AdminSettings() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { success } = useToast();
   
   const [changingPassword, setChangingPassword] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error && !error.message.includes('Auth session missing')) {
-        console.error('Logout error:', error);
-        alert('Logout failed: ' + error.message);
-      }
-      
-      navigate("/");   
-      
-    } catch (error) {
-      console.error('Logout error:', error);
-      navigate("/");
-    }
-  };
 
   const handlePasswordChange = async (currentPassword, newPassword) => {
     setChangingPassword(true);
@@ -89,16 +65,6 @@ function AdminSettings() {
             <ChangePasswordForm 
               onChangePassword={handlePasswordChange}
               loading={changingPassword}
-            />
-          </div>  
-          
-          <div className={styles.section}>
-            <h3>Account Actions</h3>
-            <Button 
-              label="Logout" 
-              onClick={handleLogout}
-              color="danger"
-              width="100%"
             />
           </div>
         </div>

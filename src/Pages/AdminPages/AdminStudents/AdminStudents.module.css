@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 25px;
+  margin-top: 20px;
 }
 
 .top {
@@ -11,7 +12,6 @@
   flex-wrap: wrap;
   gap: 15px;
   /* Add padding or max-width to prevent touching edges */
-  padding: 0 15px; /* Add horizontal padding */
   max-width: 100%; /* Ensure it doesn't overflow */
   box-sizing: border-box; /* Include padding in width calculation */
 }
@@ -19,7 +19,6 @@
 .searchAndFilter {
   display: flex;
   align-items: center;
-  gap: 15px;
   flex: 1;
   min-width: 300px;
   max-width: 70%; /* Prevent from taking too much space */

@@ -250,7 +250,6 @@ function AdminStudents() {
 
   return (
     <main className={styles.main}>
-      <PageLabel icon={<FontAwesomeIcon icon={faUsers} />} label="Students"></PageLabel>
       <SectionLabel label="Student Records"></SectionLabel>
       
       <div className={styles.top}>

@@ -16,8 +16,8 @@ const AdminLayout = () => {
       <div 
         className={styles.mainContent}
         style={{ 
-          marginLeft: isCollapsed ? "70px" : "40px",
-          width: isCollapsed ? "calc(100% - 70px)" : "calc(100% - 40px)"
+          marginLeft: "40px",
+          width: "calc(100% - 40px)"
         }} 
       >
         <Outlet />

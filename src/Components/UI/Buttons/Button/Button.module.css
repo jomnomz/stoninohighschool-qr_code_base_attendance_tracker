@@ -23,3 +23,17 @@
   transform: none;
 }
 
+.lineButton {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-weight: 600;
+  padding-top: 6px;
+  padding-bottom: 8px;
+}
+
+.lineActive {
+  font-weight: 700;
+}
+

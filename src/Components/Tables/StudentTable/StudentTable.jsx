@@ -17,6 +17,7 @@ import { useEntityEdit } from '../../Hooks/useEntityEdit';
 import { useRowExpansion } from '../../Hooks/useRowExpansion'; 
 import { useStudentActions } from '../../Hooks/useEntityActions'; 
 import { StudentService } from '../../../Utils/EntityService'; 
+import Table from '../Table/Table.jsx';
 
 const formatDateTimeLocal = (dateString) => {
   if (!dateString) return 'N/A';
@@ -598,7 +599,7 @@ const StudentTable = ({
     </div>
   );
 
-  const renderExpandedRow = (student) => {
+  const renderExpandedContent = (student) => {
     const addedAt = formatDateTimeLocal(student.created_at);
     const updatedAt = student.updated_at ? formatDateTimeLocal(student.updated_at) : 'Never updated';
     
@@ -625,131 +626,64 @@ const StudentTable = ({
       : 'Not yet updated';
 
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(student.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="9">
-          <div 
-            className={`${styles.studentCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.studentHeader}>
-              {formatStudentName(student)}
-            </div>
-          
-            <div className={styles.details}>
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Student Details</strong>
-                </div>
-                <div className={styles.studentInfo}>LRN: {student.lrn}</div>
-                <div className={styles.studentInfo}>Grade & Section: {student.grade} - {student.section}</div>
-                <div className={styles.studentInfo}>Full Name: {formatStudentName(student)}</div>
-                <div className={styles.studentInfo}>Email: {formatNA(student.email)}</div>
-                <div className={styles.studentInfo}>Phone: {formatNA(student.phone_number)}</div>
-              </div>
-
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Guardian Information</strong>
-                </div>
-                <div className={styles.studentInfo}>
-                  Name: {formatNA(student.guardian_first_name)} {(student.guardian_middle_name)} {formatNA(student.guardian_last_name)}
-                </div>
-                <div className={styles.studentInfo}>
-                  Phone: {formatNA(student.guardian_phone_number)}
-                </div>
-                <div className={styles.studentInfo}>
-                  Email: {formatNA(student.guardian_email)}
-                </div>
-              </div>
-          
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Record Information</strong>
-                </div>
-                <div className={styles.studentInfo}>
-                  Added: {addedAt}
-                </div>
-                <div className={styles.studentInfo}>
-                  Last Updated: {updatedAt}
-                </div>
-                <div className={styles.studentInfo}>
-                  Last Updated By: {updatedByName}
-                  {student.updated_by && student.updated_by_user && (
-                    <span style={{ color: '#666', fontSize: '0.9em', marginLeft: '8px' }}>
-                      ({student.updated_by_user.username || student.updated_by_user.email})
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  const renderRegularRow = (student, rowColorClass, visibleRowIndex, isSelected) => {
-    return (
-      <tr 
-        key={student.id}
-        className={`${styles.studentRow} ${rowColorClass} ${editingStudent === student.id ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-        onClick={(e) => handleRowClick(student.id, e)}
+      <div 
+        className={`${styles.studentCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
       >
-        <td>
-          <div className={styles.icon} onClick={(e) => handleStudentSelect(student.id, e)}>
-            <FontAwesomeIcon 
-              icon={isSelected ? fasCircle : farCircle} 
-              style={{ 
-                cursor: 'pointer', 
-                color: isSelected ? '#007bff' : '' 
-              }}
-            />
+        <div className={styles.studentHeader}>
+          {formatStudentName(student)}
+        </div>
+      
+        <div className={styles.details}>
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Student Details</strong>
+            </div>
+            <div className={styles.studentInfo}>LRN: {student.lrn}</div>
+            <div className={styles.studentInfo}>Grade & Section: {student.grade} - {student.section}</div>
+            <div className={styles.studentInfo}>Full Name: {formatStudentName(student)}</div>
+            <div className={styles.studentInfo}>Email: {formatNA(student.email)}</div>
+            <div className={styles.studentInfo}>Phone: {formatNA(student.phone_number)}</div>
           </div>
-        </td>
-        <td>{renderField(student, 'lrn')}</td>
-        <td>{renderField(student, 'first_name')}</td>
-        <td>{renderField(student, 'last_name')}</td>
-        <td>{renderField(student, 'grade')}</td>
-        <td>{renderField(student, 'section')}</td>
-        <td>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faQrcode} 
-              onClick={(e) => handleQRCodeClickWithEvent(student, e)} 
-              className="action-button"
-              style={{ cursor: 'pointer' }}
-            />
+
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Guardian Information</strong>
+            </div>
+            <div className={styles.studentInfo}>
+              Name: {formatNA(student.guardian_first_name)} {(student.guardian_middle_name)} {formatNA(student.guardian_last_name)}
+            </div>
+            <div className={styles.studentInfo}>
+              Phone: {formatNA(student.guardian_phone_number)}
+            </div>
+            <div className={styles.studentInfo}>
+              Email: {formatNA(student.guardian_email)}
+            </div>
           </div>
-        </td>
-        <td>{renderEditCell(student)}</td>
-        <td>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faTrashCan} 
-              className="action-button"
-              onClick={(e) => handleDeleteClickWithEvent(student, e)}
-            />
+
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Record Information</strong>
+            </div>
+            <div className={styles.studentInfo}>
+              Added: {addedAt}
+            </div>
+            <div className={styles.studentInfo}>
+              Last Updated: {updatedAt}
+            </div>
+            <div className={styles.studentInfo}>
+              Last Updated By: {updatedByName}
+              {student.updated_by && student.updated_by_user && (
+                <span style={{ color: '#666', fontSize: '0.9em', marginLeft: '8px' }}>
+                  ({student.updated_by_user.username || student.updated_by_user.email})
+                </span>
+              )}
+            </div>
           </div>
-        </td>
-      </tr>
+        </div>
+      </div>
     );
   };
-
-  if (parentLoading || loading) {
-    return (
-      <div className={styles.studentTableContainer}>
-        <div className={styles.loading}>Loading students...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.studentTableContainer}>
-        <div className={styles.error}>Error: {error}</div>
-      </div>
-    );
-  }
 
   const getTableInfoMessage = () => {
     const studentCount = sortedStudents.length;
@@ -792,108 +726,197 @@ const StudentTable = ({
     return message;
   };
 
-  return (
-    <div className={styles.studentTableContainer} ref={tableRef}>
-      <div className={styles.studentsTable}>
-        <div className={styles.classContainers}>
-          <Button 
-            label="All"
-            tabBottom={true}
-            height="xs"
-            width="xs-sm"
-            color="grades"
-            active={currentClass === 'all'}
-            onClick={() => handleClassChange('all')}
-          >
-            All
-          </Button>
-          
-          {grades.map(grade => (
-            <Button 
-              key={grade}
-              label={`Grade ${grade}`}
-              tabBottom={true}
-              height="xs"
-              width="xs-sm"
-              color="grades"
-              active={currentClass === grade}
-              onClick={() => handleClassChange(grade)}
-            >
-              Grade {grade}
-            </Button>
-          ))}
+  const getVisibleRowClassName = useMemo(() => {
+    return ({ row, rowIndex }) => {
+      const visibleRowIndex = sortedStudents
+        .slice(0, rowIndex)
+        .filter(student => !isRowExpanded(student.id))
+        .length;
 
+      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
+      const isSelected = selectedStudents.includes(row.id);
+
+      return [
+        styles.studentRow,
+        rowColorClass,
+        editingStudent === row.id ? styles.editingRow : '',
+        isSelected ? styles.selectedRow : ''
+      ].filter(Boolean).join(' ');
+    };
+  }, [sortedStudents, isRowExpanded, selectedStudents, editingStudent]);
+
+  const tableColumns = useMemo(() => [
+    {
+      key: 'select',
+      label: '',
+      renderHeader: () => (
+        <div className={styles.icon} onClick={handleSelectAll}>
+          <FontAwesomeIcon 
+            icon={allVisibleSelected ? fasCircle : farCircle} 
+            style={{ 
+              cursor: 'pointer',
+              color: allVisibleSelected ? '#0f6b58' : '' 
+            }}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const isSelected = selectedStudents.includes(row.id);
+
+        return (
+          <div className={styles.icon} onClick={(e) => handleStudentSelect(row.id, e)}>
+            <FontAwesomeIcon 
+              icon={isSelected ? fasCircle : farCircle} 
+              style={{ 
+                cursor: 'pointer', 
+                color: isSelected ? '#0f6b58' : '' 
+              }}
+            />
+          </div>
+        );
+      }
+    },
+    {
+      key: 'lrn',
+      label: 'LRN',
+      renderCell: ({ row }) => renderField(row, 'lrn')
+    },
+    {
+      key: 'first_name',
+      label: 'FIRST NAME',
+      renderCell: ({ row }) => renderField(row, 'first_name')
+    },
+    {
+      key: 'last_name',
+      label: 'LAST NAME',
+      renderCell: ({ row }) => renderField(row, 'last_name')
+    },
+    {
+      key: 'grade',
+      label: 'GRADE',
+      renderCell: ({ row }) => renderField(row, 'grade')
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      renderHeader: () => (
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderRow}>
+            <span>SECTION</span>
+            <SectionDropdown 
+              availableSections={sectionsToShowInDropdown}
+              selectedValue={selectedSection}
+              onSelect={handleSectionFilter}
+            />
+          </div>
+        </div>
+      ),
+      renderCell: ({ row }) => renderField(row, 'section')
+    },
+    {
+      key: 'qr_code',
+      label: 'QR CODE',
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faQrcode} 
+            onClick={(e) => handleQRCodeClickWithEvent(row, e)} 
+            className="action-button"
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
+      )
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      renderCell: ({ row }) => renderEditCell(row)
+    },
+    {
+      key: 'delete',
+      label: 'DELETE',
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faTrashCan} 
+            className="action-button"
+            onClick={(e) => handleDeleteClickWithEvent(row, e)}
+          />
+        </div>
+      )
+    }
+  ], [
+    allVisibleSelected,
+    selectedStudents,
+    sectionsToShowInDropdown,
+    selectedSection,
+    renderField,
+    renderEditCell
+  ]);
+
+  const topContent = (
+    <>
+      <Button 
+        label="All"
+        line={true}
+        tabBottom={true}
+        height="xs"
+        width="xs-sm"
+        color="grades"
+        active={currentClass === 'all'}
+        onClick={() => handleClassChange('all')}
+      >
+        All
+      </Button>
+      
+      {grades.map(grade => (
+        <Button 
+          key={grade}
+          label={`Grade ${grade}`}
+          line={true}
+          tabBottom={true}
+          height="xs"
+          width="xs-sm"
+          color="grades"
+          active={currentClass === grade}
+          onClick={() => handleClassChange(grade)}
+        >
+          Grade {grade}
+        </Button>
+      ))}
+    </>
+  );
+
+  return (
+    <>
+      <Table
+        columns={tableColumns}
+        rows={sortedStudents}
+        getRowId={(row) => row.id}
+        loading={parentLoading || loading}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={getTableInfoMessage()}
+        containerRef={tableRef}
+        renderTopContent={topContent}
+        headerContent={(
           <div className={styles.tableInfo}>
             <p>{getTableInfoMessage()}</p>
           </div>
-        </div>
-
-        <div className={styles.tableWrapper}>
-          <table className={styles.studentsTable}>
-            <thead>
-              <tr>
-                <th>
-                  <div className={styles.icon} onClick={handleSelectAll}>
-                    <FontAwesomeIcon 
-                      icon={allVisibleSelected ? fasCircle : farCircle} 
-                      style={{ cursor: 'pointer',
-                        color: allVisibleSelected ? '#007bff' : '' 
-                      }}
-                    />
-                  </div>
-                </th>
-                <th>LRN</th>
-                <th>FIRST NAME</th>
-                <th>LAST NAME</th>
-                <th>GRADE</th>
-                <th>
-                  <div className={styles.sectionHeader}>
-                    <div className={styles.sectionHeaderRow}>
-                      <span>SECTION</span>
-                      <SectionDropdown 
-                        availableSections={sectionsToShowInDropdown}
-                        selectedValue={selectedSection}
-                        onSelect={handleSectionFilter}
-                      />
-                    </div>
-                  </div>
-                </th>
-                <th>QR CODE</th>
-                <th>EDIT</th>
-                <th>DELETE</th>
-              </tr>
-            </thead>
-            <tbody>
-  {sortedStudents.length === 0 ? (
-    <tr>
-      <td colSpan="9" className={styles.noStudents}>
-        {getTableInfoMessage()}
-      </td>
-    </tr>
-  ) : (
-    sortedStudents.map((student, index) => {
-      const visibleRowIndex = sortedStudents
-        .slice(0, index)
-        .filter(s => !isRowExpanded(s.id))
-        .length;
-      
-      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-      const isSelected = selectedStudents.includes(student.id);
-
-      return (
-        <React.Fragment key={student.id}>
-          {!isRowExpanded(student.id) && (
-            renderRegularRow(student, rowColorClass, visibleRowIndex, isSelected)
-          )}
-          {renderExpandedRow(student)}
-        </React.Fragment>
-      );
-    })
-  )}
-</tbody>
-          </table>
-        </div>
-      </div>
+        )}
+        tableLabel="Students"
+        onRowClick={({ rowId, event }) => handleRowClick(rowId, event)}
+        rowClassName={getVisibleRowClassName}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedContent(row)}
+        expandedRowColSpan={9}
+        persistExpandedRows={true}
+        hideMainRowWhenExpanded={true}
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        striped={false}
+        noDataColSpan={9}
+        className={styles.studentTableContainer}
+        wrapperClassName={styles.tableWrapper}
+      />
 
       <QRCodeModal
         isOpen={qrModalOpen}
@@ -910,7 +933,7 @@ const StudentTable = ({
         student={pendingUpdate?.student}
         onConfirm={handleConfirmUpdate}
       />
-    </div>
+    </>
   );
 };
 

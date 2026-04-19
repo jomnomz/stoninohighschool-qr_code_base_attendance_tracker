@@ -16,6 +16,7 @@ function Button(props) {
         pillLeft = false,
         pillRight = false,
         tabBottom = false,
+        line = false,
         active = false,
         backgroundNone = false, 
     } = props;
@@ -108,6 +109,10 @@ function Button(props) {
     const colorStyle = colorMap[color] || colorMap.primary;
 
     const getBackgroundColor = () => {
+        if (line) {
+            return 'transparent';
+        }
+
         if (backgroundNone) {
             return 'transparent';
         }
@@ -124,6 +129,12 @@ function Button(props) {
     };
 
     const getTextColor = () => {
+        if (line) {
+            if (active) return '#0f6b58';
+            if (isHovered) return '#0f6b58';
+            return '#1f2937';
+        }
+
         if (backgroundNone) {
             return color === 'primary' ? '#1e293b' : 
                    color === 'secondary' ? '#475569' :
@@ -136,6 +147,10 @@ function Button(props) {
     };
 
     const getBorder = () => {
+        if (line) {
+            return 'none';
+        }
+
         if (backgroundNone) {
             return 'none';
         }
@@ -152,8 +167,11 @@ function Button(props) {
         backgroundColor: backgroundColor,
         color: textColor, 
         border: border,
-        borderRadius: getBorderRadius(pill, pillLeft, pillRight),
-        boxShadow: backgroundNone ? 'none' : (active ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
+        borderRadius: line ? '0px' : getBorderRadius(pill, pillLeft, pillRight),
+        borderBottom: line
+            ? (active ? '2px solid #0f6b58' : (isHovered ? '2px solid rgba(15, 107, 88, 0.55)' : '2px solid transparent'))
+            : undefined,
+        boxShadow: line ? 'none' : (backgroundNone ? 'none' : (active ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)')),
         transition: 'all 0.2s ease',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
@@ -171,7 +189,7 @@ function Button(props) {
         <button 
             style={adjustedStyle} 
             type={type}
-            className={styles.button}
+            className={`${styles.button} ${line ? styles.lineButton : ''} ${line && active ? styles.lineActive : ''}`}
             onClick={onClick}
             disabled={disabled}
             aria-pressed={active}

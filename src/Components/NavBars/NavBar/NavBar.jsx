@@ -1,27 +1,42 @@
 import styles from './NavBar.module.css'
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../Authentication/AuthProvider/AuthProvider';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faUsers,
-  faChalkboardUser,
-} from "@fortawesome/free-solid-svg-icons";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
-import MessageIcon from '@mui/icons-material/Message';
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import SettingsIcon from '@mui/icons-material/Settings';
-import MenuIcon from '@mui/icons-material/Menu';
-import TableChartIcon from '@mui/icons-material/TableChart';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import LogoutIcon from '@mui/icons-material/Logout';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import { supabase } from '../../../lib/supabase.js';
 
 
 function NavBar({ userType = 'admin', onCollapseChange }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { profile } = useAuth()
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile && onCollapseChange) {
+      onCollapseChange(true);
+    }
+  }, [isMobile, onCollapseChange]);
 
   const toggleNavbar = () => {
     const newState = !isCollapsed;
@@ -35,65 +50,120 @@ function NavBar({ userType = 'admin', onCollapseChange }) {
 
   const navItems = {
     admin: [
-      { path: '/dashboard', icon: <DashboardIcon />, label: 'Dashboard', type: 'mui' },
-      { path: '/students', icon: faUsers, label: 'Students', type: 'fa' },
-      { path: '/guardians', icon: <FamilyRestroomIcon />, label: 'Guardians', type: 'mui' },
-      { path: '/messages', icon: <MessageIcon />, label: 'Notifications', type: 'mui' },
-      { path: '/attendance', icon: <AssignmentTurnedInIcon />, label: 'Attendance', type: 'mui' },
-      // { path: '/reports', icon: <AssignmentIcon />, label: 'Reports', type: 'mui' },
-      { path: '/masterData', icon: <TableChartIcon />, label: 'Master Data', type: 'mui' },
-      { path: '/teachers', icon: faChalkboardUser, label: 'Teachers', type: 'fa' },
-      { path: '/settings', icon: <SettingsIcon />, label: 'Settings', type: 'mui' }
+      { path: '/dashboard', icon: <DashboardOutlinedIcon />, label: 'Dashboard' },
+      { path: '/students', icon: <GroupsOutlinedIcon />, label: 'Students' },
+      { path: '/guardians', icon: <PeopleAltOutlinedIcon />, label: 'Guardians' },
+      { path: '/messages', icon: <NotificationsNoneOutlinedIcon />, label: 'Notifications' },
+      { path: '/attendance', icon: <AssignmentTurnedInOutlinedIcon />, label: 'Attendance' },
+      { path: '/masterData', icon: <TableChartOutlinedIcon />, label: 'Master Data' },
+      { path: '/teachers', icon: <SchoolOutlinedIcon />, label: 'Teachers' },
+      { path: '/settings', icon: <SettingsOutlinedIcon />, label: 'Settings' }
     ],
     teacher: [
-      { path: '/dashboard', icon: <DashboardIcon />, label: 'Dashboard', type: 'mui' },
-      { path: '/attendance', icon: <AssignmentTurnedInIcon />, label: 'Attendance', type: 'mui' },
-      { path: '/students', icon: faUsers, label: 'Students', type: 'fa' },
-      { path: '/settings', icon: <SettingsIcon />, label: 'Settings', type: 'mui' }
+      { path: '/dashboard', icon: <DashboardOutlinedIcon />, label: 'Dashboard' },
+      { path: '/attendance', icon: <AssignmentTurnedInOutlinedIcon />, label: 'Attendance' },
+      { path: '/students', icon: <GroupsOutlinedIcon />, label: 'Students' },
+      { path: '/settings', icon: <SettingsOutlinedIcon />, label: 'Settings' }
     ]
   };
 
   const currentNavItems = navItems[userType] || navItems.admin;
+  const displayName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim();
+  const displayEmail = profile?.email || profile?.username || `${userType}@example.com`;
 
-  return (
-    <nav className={`${styles.nav} ${isCollapsed ? styles.collapsed : ''}`}>
-      <div className={styles.admin}>
-        <button className={styles.toggleHide} onClick={toggleNavbar}>
-          <MenuIcon className={styles.toggleHideIcon}/>
-        </button>
-        {!isCollapsed && (
-          <>
-            <p>Welcome!</p>
-             <p>
-              {userType === 'admin' 
-                ? `Admin ${profile?.first_name} ${profile?.last_name}`
-                : `Teacher ${profile?.first_name} ${profile?.last_name}`
-              }
-            </p>
-          </>
+  const handleLogout = async () => {
+    try {
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      navigate('/');
+    }
+  };
+
+  const closeMobile = () => setMobileOpen(false);
+
+  const renderNavContent = () => (
+    <>
+      <div className={styles.header}>
+
+
+        {isMobile ? (
+          <button className={styles.iconButton} onClick={closeMobile} aria-label="Close sidebar">
+            <CloseOutlinedIcon fontSize="small" />
+          </button>
+        ) : (
+          <button className={styles.iconButton} onClick={toggleNavbar} aria-label="Toggle sidebar">
+            <MenuOutlinedIcon fontSize="small" />
+          </button>
         )}
       </div>
 
       <div className={styles.sideBar}>
         {currentNavItems.map(item => (
-          <Link 
+          <Link
             key={item.path}
             to={`/${userType}${item.path}`}
-            className={`${styles.sideBarButtons} ${isActive(item.path) ? styles.active : ''}`}
-            title={isCollapsed ? item.label : ''}
+            className={`${styles.sideBarButton} ${isActive(item.path) ? styles.active : ''}`}
+            title={isCollapsed && !isMobile ? item.label : ''}
+            onClick={isMobile ? closeMobile : undefined}
           >
-            {item.type === 'fa' ? (
-              <FontAwesomeIcon icon={item.icon} className={styles.sideBarButtonsIcons}/>
-            ) : (
-              <div className={styles.sideBarButtonsIcons}>
-                {item.icon}
-              </div>
-            )}
-            {!isCollapsed && <span>{item.label}</span>}
+            <span className={styles.sideBarButtonIcon}>{item.icon}</span>
+            {(!isCollapsed || isMobile) && <span className={styles.sideBarButtonLabel}>{item.label}</span>}
           </Link>
         ))}
       </div>
-    </nav>
+
+      <div className={styles.footer}>
+        <div className={styles.footerProfile}>
+          <span className={styles.footerIcon}>
+            <PersonOutlineIcon fontSize="small" />
+          </span>
+          {(!isCollapsed || isMobile) && (
+            <div className={styles.footerText}>
+              <p className={styles.footerName}>{displayName || 'User'}</p>
+              <p className={styles.footerEmail}>{displayEmail}</p>
+            </div>
+          )}
+        </div>
+
+        <button className={styles.logoutButton} onClick={handleLogout} type="button" pill="true">
+          <span className={styles.logoutIcon}>
+            <LogoutIcon fontSize="small" />
+          </span>
+          {(!isCollapsed || isMobile) && <span className={styles.logoutLabel}>Logout</span>}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {isMobile && (
+        <button
+          className={styles.mobileTrigger}
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open sidebar"
+        >
+          <MenuOutlinedIcon fontSize="small" />
+        </button>
+      )}
+
+      {isMobile && mobileOpen && <div className={styles.backdrop} onClick={closeMobile} />}
+
+      <nav
+        className={[
+          styles.nav,
+          isCollapsed ? styles.collapsed : '',
+          isMobile ? styles.mobileNav : '',
+          isMobile && mobileOpen ? styles.mobileOpen : ''
+        ].filter(Boolean).join(' ')}
+      >
+        {renderNavContent()}
+      </nav>
+    </>
   );
 }
 

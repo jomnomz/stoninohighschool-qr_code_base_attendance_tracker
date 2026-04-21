@@ -1,4 +1,5 @@
 import styles from './DashboardCard.module.css'
+import minimalistic1__croped_stonino from '../../../../assets/minimalistic1__croped_stonino.png'
 
 function DashboardCard({ children, colors = {} }) {
     return (

@@ -23,33 +23,23 @@ ChartJS.register(
   Legend
 );
 
-const TeacherLineChart = ({ teacherId, teacherSections, teacherClasses }) => {
+const TeacherLineChart = ({ teacherId, teacherClasses }) => {
   const [currentStatus, setCurrentStatus] = useState('present');
   const { weeklyStats, loading } = useTeacherClassAttendance(teacherId, teacherClasses);
 
   const classColors = [
-    '#4CAF50',  
-    '#2196F3',
-    '#FFC107', 
-    '#9C27B0',  
-    '#FF5722',  
-    '#00BCD4',  
-    '#795548'  
+    '#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722', '#00BCD4', '#795548'
   ];
 
   const getChartData = () => {
     if (!weeklyStats || !weeklyStats.dates || weeklyStats.dates.length === 0) {
-      return {
-        labels: [],
-        datasets: []
-      };
+      return { labels: [], datasets: [] };
     }
 
     const statusDataKey = currentStatus;
     const statusLabels = weeklyStats[statusDataKey]?.labels || [];
     const statusData = weeklyStats[statusDataKey]?.data || [];
     const studentTotalsData = weeklyStats.totalStudents?.data || [];
-    const hasRecords = weeklyStats.hasRecords || [];
     
     const percentageDatasets = statusLabels.map((className, classIndex) => {
       const rawCounts = statusData[classIndex] || [];
@@ -66,13 +56,11 @@ const TeacherLineChart = ({ teacherId, teacherSections, teacherClasses }) => {
         rawCounts: rawCounts, 
         studentTotals: studentTotals, 
         borderColor: classColors[classIndex % classColors.length],
-        backgroundColor: classColors[classIndex % classColors.length] + '20',
+        backgroundColor: 'transparent',
         tension: 0.4,
-        fill: false,
         borderWidth: 2,
         pointBackgroundColor: classColors[classIndex % classColors.length],
-        pointRadius: 3,
-        pointHoverRadius: 5
+        clip: false // Prevents point clipping at 100%
       };
     });
 
@@ -85,49 +73,35 @@ const TeacherLineChart = ({ teacherId, teacherSections, teacherClasses }) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 10, right: 10 }
+    },
     scales: {
       x: {
-        grid: {
-          display: false,
-          drawBorder: false
-        },
-        ticks: {
-          maxRotation: 0,
-          minRotation: 0,
-          padding: 5,
-          autoSkip: false,
-          font: {
-            size: 10
-          }
-        }
+        grid: { display: false },
+        ticks: { maxRotation: 0, font: { size: 10 } }
       },
       y: {
         beginAtZero: true,
         max: 100,
         ticks: {
-          stepSize: 20,
-          padding: 5,
-          callback: function(value) {
-            return value + '%';
-          }
+          stepSize: 25,
+          font: { size: 10 },
+          callback: (value) => value + '%'
         },
-        grid: {
-          drawBorder: false,
-          color: 'rgba(0, 0, 0, 0.05)'
-        }
+        grid: { color: '#f0f0f0' }
       }
     },
     plugins: {
       legend: {
         position: 'top',
+        align: 'start',
         labels: {
-          boxWidth: 12,
+          boxWidth: 10,
           usePointStyle: true,
           pointStyle: 'circle',
-          padding: 15,
-          font: {
-            size: 12
-          }
+          font: { size: 11 },
+          padding: 15
         }
       },
       tooltip: {
@@ -138,88 +112,50 @@ const TeacherLineChart = ({ teacherId, teacherSections, teacherClasses }) => {
             const hasRecords = weeklyStats.hasRecords?.[dataIndex];
             
             if (hasRecords === false) {
-              if (context.datasetIndex === 0) {
-                return 'No attendance data for this day';
-              }
-              return null; 
+              return context.datasetIndex === 0 ? 'No attendance data' : null;
             }
             
-            const label = dataset.label || '';
             const percentage = context.raw || 0;
             const rawCount = dataset.rawCounts?.[dataIndex] || 0;
             const totalStudents = dataset.studentTotals?.[dataIndex] || 0;
-            
-            const statusText = currentStatus === 'present' ? 'Present' : 
-                              (currentStatus === 'late' ? 'Late' : 'Absent');
-            
             const studentText = rawCount === 1 ? 'student' : 'students';
-            return `${label} ${statusText}: ${percentage}% (${rawCount}/${totalStudents} ${studentText})`;
-          },
-          title: function(tooltipItems) {
-            if (tooltipItems.length > 0) {
-              const dataIndex = tooltipItems[0].dataIndex;
-              const hasRecords = weeklyStats.hasRecords?.[dataIndex];
-              
-              if (hasRecords === false) {
-                return `${weeklyStats.dates[dataIndex]} - No Data`;
-              }
-              return weeklyStats.dates[dataIndex];
-            }
-            return '';
+            
+            return `${dataset.label}: ${percentage}% (${rawCount}/${totalStudents} ${studentText})`;
           }
         }
       }
     },
     elements: {
-      point: {
-        radius: 3,
-        hoverRadius: 5
-      },
-      line: {
-        tension: 0.4
-      }
+      point: { radius: 3, hoverRadius: 6 }
     }
   };
 
-  const handleStatusChange = (status) => {
-    setCurrentStatus(status);
-  };
-
-  const hasData = weeklyStats && 
-                  weeklyStats[currentStatus] && 
-                  weeklyStats[currentStatus].data && 
-                  weeklyStats[currentStatus].data.length > 0;
+  const hasData = weeklyStats && weeklyStats[currentStatus]?.data?.length > 0;
 
   return (
     <div className={styles.teacherLineChartContainer}>
+      <h3 className={styles.graphTitle}>Attendance Performance | Past 5 Days</h3>
+      
       <div className={styles.chartToggle}>
         <button 
           className={currentStatus === 'present' ? styles.active : ''}
-          onClick={() => handleStatusChange('present')}
-        >
-          Present
-        </button>
+          onClick={() => setCurrentStatus('present')}
+        >Present</button>
         <button 
           className={currentStatus === 'late' ? styles.active : ''}
-          onClick={() => handleStatusChange('late')}
-        >
-          Late
-        </button>
+          onClick={() => setCurrentStatus('late')}
+        >Late</button>
         <button 
           className={currentStatus === 'absent' ? styles.active : ''}
-          onClick={() => handleStatusChange('absent')}
-        >
-          Absent
-        </button>
+          onClick={() => setCurrentStatus('absent')}
+        >Absent</button>
       </div>
       
       <div className={styles.chartWrapper}>
         {loading ? (
           <div className={styles.loading}>Loading trend data...</div>
         ) : !hasData ? (
-          <div className={styles.noData}>
-            No attendance data available for the selected status
-          </div>
+          <div className={styles.noData}>No attendance data available</div>
         ) : (
           <Line data={getChartData()} options={options} />
         )}

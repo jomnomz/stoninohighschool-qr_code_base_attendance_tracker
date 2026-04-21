@@ -1,28 +1,65 @@
-.cardContainer{
-    height: 120px;  /* Reduced from 140px */
-    width: 220px;   /* Reduced from 290px */
+.cardContainer {
+
+    width: auto; 
     display: flex;
     flex-direction: column;
-    border-radius: 5px;
-    border: none;
-    gap: 10px;      /* Reduced gap */
-    color: white;
+    justify-content: center; /* Keeps label and number vertically centered */
+    border-radius: 10px;
+    border: solid 1px #CACED6;
+    color: black;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+    background-color: transparent !important;
 }
 
-.label{
+.label {
     display: flex;
     justify-content: left;
-    align-items: center;
-    margin-left: 15px;  /* Reduced margin */
-    margin-top: 8px;    /* Reduced margin */
-    font-size: 18px;    /* Reduced font size */
+    margin-left: 15px;
+    margin-top: 8px;
+    font-size: 18px;
+    
+    /* 3. Forces the text to stay in one single line */
+    white-space: nowrap; 
+    z-index: 2;
 }
 
-.number{
+.number {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 26px;    /* Reduced font size */
+    /* 4. Switched to flex-start so it stays under the label on the left */
+    justify-content: flex-start; 
+    margin-left: 15px;
+    font-size: 26px;
     font-weight: bold;
+    z-index: 2;
+}
+
+.cardContainer::after {
+    content: '';
+    position: absolute;
+    right: 0; 
+    bottom: 0; 
+    /* 1. Using fixed pixels prevents the "floating" gap caused by % containers */
+    width: 100%; 
+    height: 100%; 
+    background-image: url('../../../../assets/minimalistic1__croped_stonino.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+    
+    /* 2. Forces the image to the absolute right and bottom edge of this container */
+    background-position: right 0 bottom 0; 
+    
+    opacity: 0.30;
+    
+    /* 3. We use a negative bottom margin or absolute tweak to push it past the curve */
+    margin-bottom: -40px;
+    margin-right: -10px;
+
+    /* 4. Keeps the rotation centered on that bottom right point */
+    transform-origin: bottom right;
+    transform: rotate(14deg); 
+    
+    pointer-events: none;
+    z-index: 1;
 }

@@ -110,21 +110,19 @@ function TeacherDashboard() {
     <>
       <main className={styles.main}>
         <div className={styles.pageHeader}>
-          <PageLabel 
-            icon={<DashboardIcon sx={{ fontSize: 50, mb: -0.7 }} />} 
+          <SectionLabel 
             label="Teacher Dashboard"
-          ></PageLabel>
+          ></SectionLabel>
           <DateTodayLabel></DateTodayLabel>    
         </div>
         
         {/* Stats Cards */}
-        <SectionLabel label="Overview"></SectionLabel>
         <div className={styles.cards}>
           {/* Total Students Card */}
           <DashboardCard colors={{bg: '#FF6B6B'}}>
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faUserGraduate} /> Total Students
+                 Total Students
               </div>
               <div className={styles.number}>{teacherStudentCount}</div>
             </div>
@@ -134,7 +132,7 @@ function TeacherDashboard() {
           <DashboardCard colors={{bg: '#4ECDC4'}}>
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faBook} /> Total Subjects
+                 Total Subjects
               </div>
               <div className={styles.number}>{uniqueSubjectsCount}</div>
             </div>
@@ -144,7 +142,7 @@ function TeacherDashboard() {
           <DashboardCard colors={{bg: '#FFD166'}}>
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faUsers} /> My Classes
+                 My Classes
               </div>
               <div className={styles.number}>{teacherClasses.length}</div>
             </div>
@@ -152,23 +150,22 @@ function TeacherDashboard() {
         </div>
 
         {/* Charts Section - USING TEACHER-ONLY CHARTS */}
-        <SectionLabel label="Statistics"></SectionLabel>
         <div className={styles.charts}>
+          <TeacherLineChart 
+            teacherId={currentTeacher?.id} 
+            teacherSections={teacherSections}
+            teacherClasses={teacherClasses}
+          />          
           <TeacherBarGraph 
             teacherId={currentTeacher?.id} 
             teacherSections={teacherSections}
             teacherClasses={teacherClasses}
           />
-          <TeacherPieChart 
+          {/* <TeacherPieChart 
             teacherId={currentTeacher?.id} 
             teacherSections={teacherSections}
             teacherClasses={teacherClasses}
-          />
-          <TeacherLineChart 
-            teacherId={currentTeacher?.id} 
-            teacherSections={teacherSections}
-            teacherClasses={teacherClasses}
-          />
+          /> */}
         </div>
       </main>
     </>

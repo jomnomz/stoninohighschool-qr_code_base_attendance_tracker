@@ -19,13 +19,18 @@ import { supabase } from '../../../lib/supabase.js';
 import minimalist_stonino from  '../../../assets/minimalist_stonino.png';
 
 
+
 function NavBar({ userType = 'admin', onCollapseChange }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { profile } = useAuth()
+  const { profile } = useAuth();
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 1024);

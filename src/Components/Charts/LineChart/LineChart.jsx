@@ -55,7 +55,8 @@ const LineChart = ({ teacherId, teacherSections }) => {
         backgroundColor: 'transparent',
         tension: 0.4,
         borderWidth: 2,
-        pointBackgroundColor: '#4CAF50'
+        pointBackgroundColor: '#4CAF50',
+        clip: false // Prevents point clipping
       },
       {
         label: 'Late',
@@ -64,7 +65,8 @@ const LineChart = ({ teacherId, teacherSections }) => {
         backgroundColor: 'transparent',
         tension: 0.4,
         borderWidth: 2,
-        pointBackgroundColor: '#FFC107'
+        pointBackgroundColor: '#FFC107',
+        clip: false
       },
       {
         label: 'Absent',
@@ -73,7 +75,8 @@ const LineChart = ({ teacherId, teacherSections }) => {
         backgroundColor: 'transparent',
         tension: 0.4,
         borderWidth: 2,
-        pointBackgroundColor: '#F44336'
+        pointBackgroundColor: '#F44336',
+        clip: false
       }
     ]
   };
@@ -81,48 +84,42 @@ const LineChart = ({ teacherId, teacherSections }) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 10, // Gives the top points room to breathe
+        right: 10
+      }
+    },
     scales: {
       x: {
-        grid: {
-          display: false,
-          drawBorder: false
-        },
+        grid: { display: false },
         ticks: {
           maxRotation: 0,
-          minRotation: 0,
-          padding: 5,
-          autoSkip: false,
-          font: {
-            size: 10
-          }
+          font: { size: 10 }
         }
       },
       y: {
+                stacked: true,
         beginAtZero: true,
         max: 100,
         ticks: {
-          stepSize: 20,
-          padding: 5,
-          callback: function(value) {
-            return value + '%';
-          }
+          stepSize: 25,
+          font: { size: 10 },
+          callback: (value) => value + '%'
         },
-        grid: {
-          drawBorder: false
-        }
+        grid: { color: '#f0f0f0' }
       }
     },
     plugins: {
       legend: {
         position: 'top',
+        align: 'start',
         labels: {
-          boxWidth: 12,
+          boxWidth: 10,
           usePointStyle: true,
           pointStyle: 'circle',
-          padding: 15,
-          font: {
-            size: 12
-          }
+          paddingBottom: 20, 
+          font: { size: 11 }
         }
       },
       tooltip: {
@@ -131,25 +128,14 @@ const LineChart = ({ teacherId, teacherSections }) => {
             const dataIndex = context.dataIndex;
             const label = context.dataset.label || '';
             const value = context.raw || 0;
-            
-            // If no records for this date, show different message
             if (hasRecords[dataIndex] === false) {
-              // Only show once (for the first dataset)
-              if (context.datasetIndex === 0) {
-                return 'No attendance data for this day';
-              }
-              return null; // Hide other labels for no-data days
+              return context.datasetIndex === 0 ? 'No attendance data' : null;
             }
-            
-            // Get count for this specific status
             let count = 0;
             if (label === 'Present') count = presentCounts[dataIndex] || 0;
             else if (label === 'Late') count = lateCounts[dataIndex] || 0;
             else if (label === 'Absent') count = absentCounts[dataIndex] || 0;
-            
-            // Format: "Present: 60% (6 students)"
-            const studentText = count === 1 ? 'student' : 'students';
-            return `${label}: ${value}% (${count} ${studentText})`;
+            return `${label}: ${value}% (${count} students)`;
           }
         }
       }
@@ -157,16 +143,15 @@ const LineChart = ({ teacherId, teacherSections }) => {
     elements: {
       point: {
         radius: 3,
-        hoverRadius: 5
-      },
-      line: {
-        tension: 0.4
+        hoverRadius: 6,
+        hitRadius: 10
       }
     }
   };
 
   return (
     <div className={styles.lineChartContainer}>
+      <h3 className={styles.graphTitle}>Attendance Performance | Past 5 Days</h3>
       <div className={styles.chartWrapper}>
         <Line data={data} options={options} />
       </div>

@@ -137,6 +137,13 @@ function Button(props) {
             color: '#ffffff', 
             border: 'none',
         },
+        nav: { 
+            backgroundColor: '#1a2236', 
+            activeBackground: '#12192c', 
+            hoverBackground: '#475669', 
+            color: '#ffffff', 
+            border: 'none',
+        },
     };
 
     const getBorderRadius = (pill, pillLeft, pillRight) => {

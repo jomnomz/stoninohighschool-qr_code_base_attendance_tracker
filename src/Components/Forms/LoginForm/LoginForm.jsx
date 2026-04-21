@@ -7,6 +7,7 @@ import stonino from "../../../assets/sto nino.png";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
+import minimalistic1_stonino from "../../../assets/minimalistic1_stonino.png";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -159,8 +160,11 @@ function LoginForm() {
 
   return (
     <form className={styles.form} onSubmit={handleLogin}>
-      <div className={styles.logo}>
-        <img src={stonino} alt="Stonino" />
+      <div className={styles.top}>
+          <div className={styles.logo}>
+          <img src={minimalistic1_stonino} alt="minimalist1_stonino" />
+        </div>
+        <div><p>Sign in</p></div>
       </div>
 
       <div className={styles.inputWrapper}>
@@ -191,7 +195,7 @@ function LoginForm() {
           >
             <FontAwesomeIcon 
               icon={showPassword ? faEyeSlash : faEye} 
-              style={{ fontSize: '18px' }}
+              style={{ fontSize: '13px' }}
             />
           </button>
         </div>
@@ -200,7 +204,7 @@ function LoginForm() {
       <div className={styles.inputWrapper}>
         <Button
           label={loading ? "Logging in..." : "Login"}
-          color="success"
+          color="nav"
           width="full"
           type="submit"
           disabled={loading}

@@ -2,6 +2,8 @@
     display: flex;
     flex-direction: column;
     gap: 25px;
+    margin-top: 20px;
+    
 }
 
 .pageHeader{
@@ -33,13 +35,16 @@
 }
 
 .label{
-    margin: 15px 15px 0px 15px;
+    margin: 15px 15px 0px;
+    font-weight: bold;
+    font-size: 20px;
 }
 
 .number{
-    font-size: 30px;
+    font-size: 50px;
     font-weight: bold;
-    text-align: center;
+    text-align: start;
+    margin-left: 20px;
 }
 
 .errorText{

@@ -21,7 +21,7 @@ ChartJS.register(
   Legend
 );
 
-const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
+const TeacherBarGraph = ({ teacherId, teacherClasses }) => {
   const { classStats, loading } = useTeacherClassAttendance(teacherId, teacherClasses);
 
   const calculatePercentages = () => {
@@ -39,41 +39,43 @@ const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
         presentCount: stat.present,
         lateCount: stat.late,
         absentCount: stat.absent,
-        total: stat.total
+        total: total
       };
     });
   };
 
   const percentageData = calculatePercentages();
-  
   const classLabels = percentageData.map(stat => stat.className);
-  const presentData = percentageData.map(stat => stat.present);
-  const lateData = percentageData.map(stat => stat.late);
-  const absentData = percentageData.map(stat => stat.absent);
 
   const data = {
     labels: classLabels,
     datasets: [
       {
         label: 'Present',
-        data: presentData,
+        data: percentageData.map(stat => stat.present),
         backgroundColor: '#4CAF50',
         borderColor: '#4CAF50',
-        borderWidth: 1
+        borderWidth: 1,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
       },
       {
         label: 'Late',
-        data: lateData,
+        data: percentageData.map(stat => stat.late),
         backgroundColor: '#FFC107',
         borderColor: '#FFC107',
-        borderWidth: 1
+        borderWidth: 1,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
       },
       {
         label: 'Absent',
-        data: absentData,
+        data: percentageData.map(stat => stat.absent),
         backgroundColor: '#F44336',
         borderColor: '#F44336',
-        borderWidth: 1
+        borderWidth: 1,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
       }
     ]
   };
@@ -81,22 +83,20 @@ const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        top: 10
+      }
+    },
     scales: {
       x: {
         stacked: true,
-        grid: {
-          display: false
-        },
-        ticks: {
-          font: {
-            size: 12
-          },
-          callback: function(value, index, values) {
+        grid: { display: false },
+        ticks: { 
+          font: { size: 11 },
+          callback: function(value) {
             const label = this.getLabelForValue(value);
-            if (label.length > 15) {
-              return label.substring(0, 15) + '...';
-            }
-            return label;
+            return label.length > 12 ? label.substring(0, 10) + '..' : label;
           }
         }
       },
@@ -105,21 +105,22 @@ const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
         beginAtZero: true,
         max: 100,
         ticks: {
-          stepSize: 20,
-          padding: 5,
-          callback: function(value) {
-            return value + '%';
-          }
+          stepSize: 25,
+          font: { size: 10 },
+          callback: (value) => value + '%'
         }
       }
     },
     plugins: {
       legend: {
         position: 'top',
+        align: 'start',
         labels: {
-          boxWidth: 12,
+          boxWidth: 10,
           usePointStyle: true,
-          pointStyle: 'circle'
+          pointStyle: 'circle',
+          font: { size: 11 },
+          padding: 15
         }
       },
       tooltip: {
@@ -130,29 +131,18 @@ const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
             const dataIndex = context.dataIndex;
             const classStat = percentageData[dataIndex];
             
-            // Get count for this status
             let count = 0;
-            if (label === 'Present') {
-              count = classStat?.presentCount || 0;
-            } else if (label === 'Late') {
-              count = classStat?.lateCount || 0;
-            } else if (label === 'Absent') {
-              count = classStat?.absentCount || 0;
-            }
+            if (label === 'Present') count = classStat?.presentCount || 0;
+            else if (label === 'Late') count = classStat?.lateCount || 0;
+            else if (label === 'Absent') count = classStat?.absentCount || 0;
             
-            // Format: "Present: 60% (6 students)"
             const studentText = count === 1 ? 'student' : 'students';
             return `${label}: ${value}% (${count} ${studentText})`;
           },
           title: function(tooltipItems) {
-            const classLabel = tooltipItems[0].label;
-            const dataIndex = tooltipItems[0].dataIndex;
-            const classStat = percentageData[dataIndex];
-            
-            if (classStat && classStat.total > 0) {
-              return `${classLabel} - Total: ${classStat.total} student${classStat.total !== 1 ? 's' : ''}`;
-            }
-            return classLabel;
+            const index = tooltipItems[0].dataIndex;
+            const classStat = percentageData[index];
+            return `${classStat.className} - Total: ${classStat.total} students`;
           }
         }
       }
@@ -161,6 +151,7 @@ const TeacherBarGraph = ({ teacherId, teacherSections, teacherClasses }) => {
 
   return (
     <div className={styles.teacherBarGraph}>
+      <h3 className={styles.graphTitle}>Attendance Overview | By Class</h3>
       <div className={styles.chartWrapper}>
         {loading ? (
           <div className={styles.loading}>Loading class data...</div>

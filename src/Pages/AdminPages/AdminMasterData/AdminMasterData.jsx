@@ -316,6 +316,20 @@ function AdminMasterData() {
     }));
   }, []);
 
+  // Memoized handlers to avoid infinite re-renders
+  const handleGradeSectionsInfoTextChange = useCallback(
+    (text) => handleTableInfoChange('gradeSections', text),
+    [handleTableInfoChange]
+  );
+  const handleSubjectsInfoTextChange = useCallback(
+    (text) => handleTableInfoChange('subjects', text),
+    [handleTableInfoChange]
+  );
+  const handleSchedulesInfoTextChange = useCallback(
+    (text) => handleTableInfoChange('schedules', text),
+    [handleTableInfoChange]
+  );
+
   return (
     <main className={styles.main}>
       <SectionLabel label="Master Data Records" />
@@ -418,7 +432,7 @@ function AdminMasterData() {
               selectedGradeSections={selectedGradeSections}
               onSingleDeleteClick={handleSingleDeleteClick}
               onEntityDataUpdate={setGradeSectionData}
-              onInfoTextChange={(text) => handleTableInfoChange('gradeSections', text)}
+              onInfoTextChange={handleGradeSectionsInfoTextChange}
             />
           </div>
 
@@ -430,7 +444,7 @@ function AdminMasterData() {
               selectedSubjects={selectedSubjects}
               onSingleDeleteClick={handleSingleDeleteClick}
               onEntityDataUpdate={setSubjectData}
-              onInfoTextChange={(text) => handleTableInfoChange('subjects', text)}
+              onInfoTextChange={handleSubjectsInfoTextChange}
             />
           </div>
 
@@ -442,7 +456,7 @@ function AdminMasterData() {
               selectedSchedules={selectedSchedules}
               onSingleDeleteClick={handleSingleDeleteClick}
               onEntityDataUpdate={setScheduleData}
-              onInfoTextChange={(text) => handleTableInfoChange('schedules', text)}
+              onInfoTextChange={handleSchedulesInfoTextChange}
             />
           </div>
         </div>

@@ -4,7 +4,6 @@ import LineChart from "../../../Components/Charts/LineChart/LineChart.jsx";
 import PieChart from "../../../Components/Charts/PieChart/PieChart.jsx";
 import DashboardCard from "../../../Components/UI/Cards/DashboardCard/DashboardCard.jsx";
 import SectionLabel from "../../../Components/UI/Labels/SectionLabel/SectionLabel.jsx";
-import PageLabel from "../../../Components/UI/Labels/PageLabel/PageLabel.jsx";
 import DateTodayLabel from "../../../Components/UI/Labels/DateTodayLabel/DateTodayLabel.jsx";
 import { useSupabaseData } from '../../../Components/Hooks/fetchData.js'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -149,42 +148,29 @@ function AdminDashboard() {
     <>
       <main className={styles.main}>
         <div className={styles.pageHeader}>
-          <PageLabel icon={<DashboardIcon sx={{ fontSize: 50, mb: -0.7 }}  />} label="Dashboard"></PageLabel>
+          <SectionLabel label="Admin Dashboard"></SectionLabel>
           <DateTodayLabel></DateTodayLabel>    
         </div>
-        <SectionLabel label="Overview"></SectionLabel>
         <div className={styles.cards}>
           {/* Students Card */}
           <DashboardCard  
-            colors={{bg: '#FF6B6B'}}
+            colors={{bg: '#E5EEF5'}}
           >
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faUserGraduate} /> Students
+                Total Students & Guardians 
               </div>
               <div className={styles.number}>{students?.length || 0}</div>
             </div>
           </DashboardCard>
 
-          {/* Guardians Card */}
-          <DashboardCard  
-            colors={{bg: '#4ECDC4'}}
-          >
-            <div className={styles.card}>
-              <div className={styles.label}>
-                <FontAwesomeIcon icon={faUserShield} /> Guardians
-              </div>
-              <div className={styles.number}>{guardianCount || 0}</div>
-            </div>
-          </DashboardCard>
-
           {/* Total Teachers Card */}
           <DashboardCard 
-            colors={{bg: '#FFD166'}}
+            colors={{bg: '#E5EEF5'}}
           >
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faChalkboardUser} /> Total Teachers
+                 Total Teachers 
               </div>
               <div className={styles.number}>{totalTeachers}</div>             
             </div>
@@ -192,11 +178,11 @@ function AdminDashboard() {
 
           {/* Teachers with Accounts Card */}
           <DashboardCard 
-            colors={{bg: '#06D6A0'}}
+            colors={{bg: '#E5EEF5'}}
           >
             <div className={styles.card}>
               <div className={styles.label}>
-                <FontAwesomeIcon icon={faUserCheck} /> Teacher Accounts
+                Teacher Accounts
               </div>
               <div className={styles.number}>{teachersWithAccounts}</div>             
             </div>
@@ -204,11 +190,11 @@ function AdminDashboard() {
 
           {/* SMS Sent Today Card */}
           <DashboardCard 
-            colors={{bg: '#118AB2'}}
+            colors={{bg: '#E5EEF5'}}
           >
             <div className={styles.card}>
               <div className={styles.label}>
-                <MessageIcon sx={{ mb: -0.5 }}/> SMS Sent Today
+                 SMS Notifications Sent Today
               </div>
               <div className={styles.number}>
                 {smsError ? (
@@ -222,23 +208,14 @@ function AdminDashboard() {
                   <small>{smsError}</small>
                 </div>
               )}
-              {!smsError && !smsLoading && (
-                <div className={styles.smsTimestamp}>
-                  <small>As of {new Date().toLocaleTimeString('en-PH', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    timeZone: 'Asia/Manila'
-                  })}</small>
-                </div>
-              )}
+              {/* Timestamp removed as requested */}
             </div>
           </DashboardCard>
         </div>
-        <SectionLabel label="Statistics"></SectionLabel>
         <div className={styles.charts}>
-          <BarGraph></BarGraph>
-          <PieChart></PieChart>
           <LineChart></LineChart>
+          <BarGraph></BarGraph>
+          {/* <PieChart></PieChart> */}
         </div>
       </main>
     </>

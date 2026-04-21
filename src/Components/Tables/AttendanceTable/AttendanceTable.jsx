@@ -3,7 +3,6 @@ import { useRowExpansion } from '../../Hooks/useRowExpansion';
 import { grades, shouldHandleRowClick } from '../../../Utils/TableHelpers';
 import { formatStudentName, formatDate, formatNA, formatAttendanceStatus } from '../../../Utils/Formatters'; 
 import { sortEntities } from '../../../Utils/SortEntities'; 
-import Button from '../../UI/Buttons/Button/Button';
 import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
 import styles from './AttendanceTable.module.css';
 import { useAttendance } from '../../Hooks/useAttendance';
@@ -11,6 +10,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPenToSquare, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { supabase } from '../../../lib/supabase';
+import Table from '../Table/Table.jsx';
+import EntityDropdown from '../../UI/Buttons/EntityDropdown/EntityDropdown.jsx';
+
+const STATUS_OPTIONS = [
+  { label: 'Present', value: 'present' },
+  { label: 'Late', value: 'late' },
+  { label: 'Absent', value: 'absent' }
+];
 
 const TimePicker = ({ value, onChange, name }) => {
   const handleChange = (e) => {
@@ -61,7 +68,7 @@ const AttendanceTable = ({
   availableSections = [],
   loading: parentLoading = false,
   selectedDate = null,
-  statusFilter = 'all',
+  statusFilter: externalStatusFilter = 'all',
   onStatsUpdate
 }) => {
   const { 
@@ -84,6 +91,11 @@ const AttendanceTable = ({
   });
   const [validationErrors, setValidationErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(externalStatusFilter || 'all');
+
+  useEffect(() => {
+    setStatusFilter(externalStatusFilter || 'all');
+  }, [externalStatusFilter]);
 
   // Format time functions
   const formatTimeDisplay = useCallback((timeString) => {
@@ -539,109 +551,39 @@ const AttendanceTable = ({
     </div>
   ), [editingId, renderActionButtons, startEdit]);
 
-  const renderExpandedRow = useCallback((attendance) => {
+  const renderExpandedContent = useCallback((attendance) => {
     const statusInfo = formatStatusWithStyle(attendance.status);
     
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(attendance.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="9">
-          <div 
-            className={`${styles.attendanceCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.attendanceHeader}>
-              {formatStudentName(attendance)}
-            </div>
-            <div className={styles.studentInfo}>
-              <strong>Attendance Details</strong>
-            </div>
-            <div className={styles.attendanceInfo}>LRN: {formatNA(attendance.lrn)}</div>
-            <div className={styles.attendanceInfo}>Full Name: {formatStudentName(attendance)}</div>
-            <div className={styles.attendanceInfo}>Grade & Section: {attendance.grade} - {attendance.section}</div>
-            <div className={styles.attendanceInfo}>Time In: {formatTimeDisplay(attendance.time_in)}</div>
-            <div className={styles.attendanceInfo}>Time Out: {formatTimeDisplay(attendance.time_out)}</div>
-            <div className={styles.attendanceInfo}>Date: {formatDate(attendance.date)}</div>
-            <div className={styles.attendanceInfo}>
-              Status: <span className={statusInfo.className}>{statusInfo.text}</span>
-            </div>
-            <div className={styles.attendanceInfo}>
-              Scan Type: {formatNA(attendance.scan_type)}
-            </div>
-            {attendance.created_at && (
-              <div className={styles.attendanceInfo}>
-                Record Created: {formatDate(attendance.created_at)}
-              </div>
-            )}
+      <div 
+        className={`${styles.attendanceCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.attendanceHeader}>
+          {formatStudentName(attendance)}
+        </div>
+        <div className={styles.studentInfo}>
+          <strong>Attendance Details</strong>
+        </div>
+        <div className={styles.attendanceInfo}>LRN: {formatNA(attendance.lrn)}</div>
+        <div className={styles.attendanceInfo}>Full Name: {formatStudentName(attendance)}</div>
+        <div className={styles.attendanceInfo}>Grade & Section: {attendance.grade} - {attendance.section}</div>
+        <div className={styles.attendanceInfo}>Time In: {formatTimeDisplay(attendance.time_in)}</div>
+        <div className={styles.attendanceInfo}>Time Out: {formatTimeDisplay(attendance.time_out)}</div>
+        <div className={styles.attendanceInfo}>Date: {formatDate(attendance.date)}</div>
+        <div className={styles.attendanceInfo}>Status: {statusInfo.text}</div>
+          
+        <div className={styles.attendanceInfo}>
+          Scan Type: {formatNA(attendance.scan_type)}
+        </div>
+        {attendance.created_at && (
+          <div className={styles.attendanceInfo}>
+            Record Created: {formatDate(attendance.created_at)}
           </div>
-        </td>
-      </tr>
-    );
-  }, [formatTimeDisplay, formatStatusWithStyle, isRowExpanded]);
-
-  const renderRow = useCallback((attendance, index) => {
-    const visibleRowIndex = sortedAttendances
-      .slice(0, index)
-      .filter(a => !isRowExpanded(a.id))
-      .length;
-    
-    const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-    const statusInfo = formatStatusWithStyle(attendance.status);
-
-    return (
-      <React.Fragment key={attendance.id}>
-        {!isRowExpanded(attendance.id) && (
-          <tr 
-            className={`${styles.studentRow} ${rowColorClass} ${editingId === attendance.id ? styles.editingRow : ''}`}
-            onClick={(e) => handleRowClick(attendance.id, e)}
-          >
-            <td>{formatNA(attendance.first_name)}</td>
-            <td>{formatNA(attendance.last_name)}</td>
-            <td>{attendance.grade}</td>
-            <td>{attendance.section}</td>
-            <td>
-              {editingId === attendance.id ? (
-                <div className={styles.timeCell}>
-                  {renderTimePicker('time_in')}
-                </div>
-              ) : (
-                <div className={styles.timeCell}>
-                  <div className={styles.timeDisplay}>
-                    {formatTimeDisplayShort(attendance.time_in)}
-                  </div>
-                </div>
-              )}
-            </td>
-            <td>
-              {editingId === attendance.id ? (
-                <div className={styles.timeCell}>
-                  {renderTimePicker('time_out')}
-                  {validationErrors.time_out && (
-                    <div className={styles.errorMessage}>{validationErrors.time_out}</div>
-                  )}
-                </div>
-              ) : (
-                <div className={styles.timeCell}>
-                  <div className={styles.timeDisplay}>
-                    {formatTimeDisplayShort(attendance.time_out)}
-                  </div>
-                </div>
-              )}
-            </td>
-            <td>{formatDate(attendance.date)}</td>
-            <td>
-              <span className={statusInfo.className}>
-                {statusInfo.text}
-              </span>
-            </td>
-            <td>
-              {renderEditCell(attendance)}
-            </td>
-          </tr>
         )}
-        {renderExpandedRow(attendance)}
-      </React.Fragment>
+      </div>
     );
-  }, [sortedAttendances, isRowExpanded, editingId, handleRowClick, renderTimePicker, validationErrors, formatTimeDisplayShort, renderEditCell, renderExpandedRow, formatStatusWithStyle]);
+  }, [formatTimeDisplay, formatStatusWithStyle]);
 
   const getTableInfoMessage = useCallback(() => {
     const attendanceCount = sortedAttendances.length;
@@ -679,6 +621,153 @@ const AttendanceTable = ({
     return message;
   }, [sortedAttendances.length, selectedDate, selectedSection, currentClass, statusFilter, searchTerm]);
 
+  const getVisibleRowClassName = useMemo(() => {
+    return ({ row }) => {
+      return [
+        styles.studentRow,
+        editingId === row.id ? styles.editingRow : ''
+      ].filter(Boolean).join(' ');
+    };
+  }, [editingId]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
+
+  const tableColumns = useMemo(() => [
+    {
+      key: 'first_name',
+      label: 'FIRST NAME',
+      headerStyle: withColumnWidth('14%', 120),
+      cellStyle: withColumnWidth('14%', 120),
+      renderCell: ({ row }) => formatNA(row.first_name)
+    },
+    {
+      key: 'last_name',
+      label: 'LAST NAME',
+      headerStyle: withColumnWidth('14%', 120),
+      cellStyle: withColumnWidth('14%', 120),
+      renderCell: ({ row }) => formatNA(row.last_name)
+    },
+    {
+      key: 'grade',
+      label: 'GRADE',
+      headerStyle: withColumnWidth('8%', 80),
+      cellStyle: withColumnWidth('8%', 80),
+      renderCell: ({ row }) => row.grade
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      headerStyle: withColumnWidth('12%', 120),
+      cellStyle: withColumnWidth('12%', 120),
+      renderHeader: () => (
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderRow}>
+            <span>SECTION</span>
+            <SectionDropdown 
+              availableSections={sectionsToShowInDropdown}
+              selectedValue={selectedSection}
+              onSelect={handleSectionFilter}
+            />
+          </div>
+        </div>
+      ),
+      renderCell: ({ row }) => row.section
+    },
+    {
+      key: 'time_in',
+      label: 'TIME IN',
+      headerStyle: withColumnWidth('14%', 120),
+      cellStyle: withColumnWidth('14%', 120),
+      renderCell: ({ row }) => (
+        editingId === row.id ? (
+          <div className={styles.timeCell}>
+            {renderTimePicker('time_in')}
+          </div>
+        ) : (
+          <div className={styles.timeCell}>
+            <div className={styles.timeDisplay}>
+              {formatTimeDisplayShort(row.time_in)}
+            </div>
+          </div>
+        )
+      )
+    },
+    {
+      key: 'time_out',
+      label: 'TIME OUT',
+      headerStyle: withColumnWidth('14%', 120),
+      cellStyle: withColumnWidth('14%', 120),
+      renderCell: ({ row }) => (
+        editingId === row.id ? (
+          <div className={styles.timeCell}>
+            {renderTimePicker('time_out')}
+            {validationErrors.time_out && (
+              <div className={styles.errorMessage}>{validationErrors.time_out}</div>
+            )}
+          </div>
+        ) : (
+          <div className={styles.timeCell}>
+            <div className={styles.timeDisplay}>
+              {formatTimeDisplayShort(row.time_out)}
+            </div>
+          </div>
+        )
+      )
+    },
+    {
+      key: 'date',
+      label: 'DATE',
+      headerStyle: withColumnWidth('12%', 120),
+      cellStyle: withColumnWidth('12%', 120),
+      renderCell: ({ row }) => formatDate(row.date)
+    },
+    {
+      key: 'status',
+      label: 'STATUS',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderHeader: () => (
+        <div className={styles.statusHeader}>
+          <span>Status</span>
+          <EntityDropdown
+            options={STATUS_OPTIONS}
+            selectedValue={statusFilter === 'all' ? '' : statusFilter}
+            onSelect={(value) => setStatusFilter(value || 'all')}
+            allLabel="All"
+            buttonTitle="Filter status"
+            getOptionLabel={(option) => option.label}
+            getOptionValue={(option) => option.value}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const statusInfo = formatStatusWithStyle(row.status);
+        return <span className={statusInfo.className}>{statusInfo.text}</span>;
+      }
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      headerStyle: withColumnWidth('8%', 70),
+      cellStyle: withColumnWidth('8%', 70),
+      renderCell: ({ row }) => renderEditCell(row)
+    }
+  ], [
+    sectionsToShowInDropdown,
+    selectedSection,
+    handleSectionFilter,
+    editingId,
+    renderTimePicker,
+    validationErrors.time_out,
+    formatTimeDisplayShort,
+    formatStatusWithStyle,
+    statusFilter,
+    renderEditCell
+  ]);
+
   // Loading and error states
   if (parentLoading || attendanceLoading) {
     return (
@@ -709,82 +798,34 @@ const AttendanceTable = ({
   }
 
   return (
-    <div className={styles.attendanceTableContainer} ref={tableRef}>
-      <div className={styles.attendanceTable}>
-        <div className={styles.classContainers}>
-          <Button 
-            label="All"
-            tabBottom={true}
-            height="xs"
-            width="xs-sm"
-            color="grades"
-            active={currentClass === 'all'}
-            onClick={() => handleClassChange('all')}
-          >
-            All
-          </Button>
-          
-          {grades.map(grade => (
-            <Button 
-              key={grade}
-              label={`Grade ${grade}`}
-              tabBottom={true}
-              height="xs"
-              width="xs-sm"
-              color="grades"
-              active={currentClass === grade}
-              onClick={() => handleClassChange(grade)}
-            >
-              Grade {grade}
-            </Button>
-          ))}
-
-          <div className={styles.tableInfo}>
-            <p>{getTableInfoMessage()}</p>
-          </div>
-        </div>
-
-        <div className={styles.tableWrapper}>
-          <table className={styles.attendancesTable}>
-            <thead>
-              <tr>
-                <th>FIRST NAME</th>
-                <th>LAST NAME</th>
-                <th>GRADE</th>
-                <th>
-                  <div className={styles.sectionHeader}>
-                    <div className={styles.sectionHeaderRow}>
-                      <span>SECTION</span>
-                      <SectionDropdown 
-                        availableSections={sectionsToShowInDropdown}
-                        selectedValue={selectedSection}
-                        onSelect={handleSectionFilter}
-                      />
-                    </div>
-                  </div>
-                </th>
-                <th>TIME IN</th>
-                <th>TIME OUT</th>
-                <th>DATE</th>
-                <th>STATUS</th>
-                <th>EDIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedAttendances.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className={styles.noAttendance}>
-                    {getTableInfoMessage()}
-                  </td>
-                </tr>
-              ) : (
-                sortedAttendances.map((attendance, index) => renderRow(attendance, index))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <Table
+      columns={tableColumns}
+      rows={sortedAttendances}
+      getRowId={(row) => row.id}
+      loading={false}
+      error=""
+      emptyMessage={getTableInfoMessage()}
+      containerRef={tableRef}
+      gradeTabs={{
+        options: grades,
+        currentValue: currentClass,
+        onChange: handleClassChange,
+        showAll: true,
+        allLabel: 'All',
+        renderLabel: (grade) => `Grade ${grade}`
+      }}
+      infoText={getTableInfoMessage()}
+      tableLabel="Attendance"
+      onRowClick={({ rowId, event }) => handleRowClick(rowId, event)}
+      rowClassName={getVisibleRowClassName}
+      expandedRowId={expandedRow}
+      renderExpandedRow={({ row }) => renderExpandedContent(row)}
+      persistExpandedRows={true}
+      hideMainRowWhenExpanded={true}
+      getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+      className={styles.attendanceTableContainer}
+      wrapperClassName={styles.tableWrapper}
+    />
   );
 };
 

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Button from '../../UI/Buttons/Button/Button';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './MessageTable.module.css';
 import { supabase } from '../../../lib/supabase';
 import SectionDropdown from '../../UI/Buttons/SectionDropdown/SectionDropdown';
+import Table from '../Table/Table.jsx';
 
 const MessageTable = ({
   searchTerm = '',
@@ -19,7 +19,7 @@ const MessageTable = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [availableSectionsLocal, setAvailableSectionsLocal] = useState([]);
-  const [expandedRows, setExpandedRows] = useState(new Set());
+  const [expandedRowId, setExpandedRowId] = useState(null);
 
   // Get today's date in Philippine time (UTC+8)
   const getTodayPhilippines = () => {
@@ -52,10 +52,9 @@ const MessageTable = ({
     const sections = messages
       .map(message => message.section || '')
       .filter(section => section && section.trim() !== '');
-    
+
     const uniqueSections = [...new Set(sections)];
-    const sorted = uniqueSections.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    return sorted;
+    return uniqueSections.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [messages]);
 
   const currentGradeSections = useMemo(() => {
@@ -277,28 +276,18 @@ const MessageTable = ({
     if (onGradeUpdate) {
       onGradeUpdate(className);
     }
-    setExpandedRows(new Set());
+    setExpandedRowId(null);
   };
 
-  const toggleRow = (messageId) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(messageId)) {
-      newExpandedRows.delete(messageId);
-    } else {
-      newExpandedRows.add(messageId);
-    }
-    setExpandedRows(newExpandedRows);
-  };
-
-  const isRowExpanded = (messageId) => {
-    return expandedRows.has(messageId);
-  };
+  const toggleRow = useCallback((messageId) => {
+    setExpandedRowId((current) => (current === messageId ? null : messageId));
+  }, []);
 
   const handleSectionFilter = (section) => {
     if (onSectionSelect) {
       onSectionSelect(section);
     }
-    setExpandedRows(new Set());
+    setExpandedRowId(null);
   };
 
   const getTableInfoMessage = () => {
@@ -359,235 +348,176 @@ const MessageTable = ({
     }
   };
 
-  const renderExpandedRow = (message) => {
+  const renderExpandedRow = useCallback((message) => {
     const isDemo = message.demo_mode;
     
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(message.id) ? styles.expandRowVisible : ''}`}>
-        <td colSpan="6">
-          <div className={`${styles.messageCard} ${styles.expandableCard}`}>
-            <div className={styles.messageHeader}>
-              SMS Message Details
+      <div className={`${styles.messageCard} ${styles.expandableCard}`}>
+        <div className={styles.messageHeader}>SMS Message Details</div>
+
+        <div className={styles.details}>
+          <div>
+            <div className={styles.messageInfo}>
+              <strong>Guardian Information</strong>
             </div>
-          
-            <div className={styles.details}>
-              <div>
-                <div className={styles.messageInfo}>
-                  <strong>Guardian Information</strong>
-                </div>
-                <div className={styles.messageInfo}>
-                  First Name: {message.guardian_first_name || 'N/A'}
-                </div>
-                <div className={styles.messageInfo}>
-                  Middle Name: {message.guardian_middle_name || 'N/A'}
-                </div>
-                <div className={styles.messageInfo}>
-                  Last Name: {message.guardian_last_name || 'N/A'}
-                </div>
-                <div className={styles.messageInfo}>
-                  Phone: {message.formatted_phone}
-                </div>
-              </div>
+            <div className={styles.messageInfo}>First Name: {message.guardian_first_name || 'N/A'}</div>
+            <div className={styles.messageInfo}>Last Name: {message.guardian_last_name || 'N/A'}</div>
+            <div className={styles.messageInfo}>Phone: {message.formatted_phone}</div>
+          </div>
 
-              <div>
-                <div className={styles.messageInfo}>
-                  <strong>Student Information</strong>
-                </div>
-                <div className={styles.messageInfo}>
-                  First Name: {message.student_first_name || 'N/A'}
-                </div>
-                <div className={styles.messageInfo}>
-                  Last Name: {message.student_last_name || 'N/A'}
-                </div>
-                <div className={styles.messageInfo}>
-                  LRN: {message.student_lrn}
-                </div>
-                <div className={styles.messageInfo}>
-                  Grade & Section: {message.grade} - {message.section}
-                </div>
-              </div>
-
-              <div>
-                <div className={styles.messageInfo}>
-                  <strong>Message Details</strong>
-                </div>
-                <div className={styles.messageInfo}>
-                  Scan Type: {message.scan_type.toUpperCase()}
-                </div>
-                
-                {isDemo && (
-                  <div className={styles.messageInfo}>
-                    <span style={{ color: '#666', fontStyle: 'italic' }}>
-                      DEMO MESSAGE - No actual SMS was sent
-                    </span>
-                  </div>
-                )}
-                
-                {!isDemo && (
-                  <>
-                    <div className={styles.messageInfo}>
-                      Provider: {message.provider}
-                    </div>
-                    <div className={styles.messageInfo}>
-                      Cost: {message.cost}
-                    </div>
-                  </>
-                )}
-                
-                {message.reason !== 'N/A' && !isDemo && (
-                  <div className={styles.messageInfo}>
-                    Reason: {message.reason}
-                    </div>
-                )}
-              </div>
+          <div>
+            <div className={styles.messageInfo}>
+              <strong>Student Information</strong>
             </div>
+            <div className={styles.messageInfo}>First Name: {message.student_first_name || 'N/A'}</div>
+            <div className={styles.messageInfo}>Last Name: {message.student_last_name || 'N/A'}</div>
+            <div className={styles.messageInfo}>LRN: {message.student_lrn}</div>
+            <div className={styles.messageInfo}>Grade & Section: {message.grade} - {message.section}</div>
+          </div>
 
-            <div className={styles.fullMessage}>
+          <div>
+            <div className={styles.messageInfo}>
+              <strong>Message Details</strong>
+            </div>
+            <div className={styles.messageInfo}>Scan Type: {message.scan_type.toUpperCase()}</div>
+
+            {isDemo && (
               <div className={styles.messageInfo}>
-                <strong>Full Message:</strong>
+                <span className={styles.demoInfo}>DEMO MESSAGE - No actual SMS was sent</span>
               </div>
-              <div className={styles.messageText}>
-                {message.message}
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  };
+            )}
 
-  const renderRegularRow = (message, rowColorClass, index) => {
-    const truncatedMessage = message.message.length > 50 
-      ? `${message.message.substring(0, 50)}...` 
-      : message.message;
-    const expanded = isRowExpanded(message.id);
+            {!isDemo && (
+              <>
+                <div className={styles.messageInfo}>Provider: {message.provider}</div>
+                <div className={styles.messageInfo}>Cost: {message.cost}</div>
+              </>
+            )}
 
-    return (
-      <tr 
-        className={`${styles.studentRow} ${rowColorClass} ${expanded ? styles.rowExpanded : ''}`}
-        onClick={() => toggleRow(message.id)}
-      >
-        <td>
-          <div className={styles.guardianCell}>
-            <div>{message.guardian_name}</div>
-            <small style={{ color: '#666' }}>{message.formatted_phone}</small>
-          </div>
-        </td>
-        <td>
-          <div className={styles.studentCell}>
-            <div>{message.student_name}</div>
-            <small style={{ color: '#666' }}>LRN: {message.student_lrn}</small>
-          </div>
-        </td>
-        <td>{message.grade}</td>
-        <td>{message.section}</td>
-        <td>
-          <div className={styles.messageCell}>
-            <div>{truncatedMessage}</div>
-          </div>
-        </td>
-        <td>{message.date_time}</td>
-      </tr>
-    );
-  };
-
-  const grades = ['all', '7', '8', '9', '10'];
-
-  if (loading || parentLoading) {
-    return (
-      <div className={styles.messageTableContainer}>
-        <div className={styles.loading}>Loading SMS logs...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.messageTableContainer}>
-        <div className={styles.error}>Error: {error}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.messageTableContainer}>
-      <div className={styles.messageTable}>
-        <div className={styles.classContainers}>
-          {grades.map(grade => (
-            <Button 
-              key={grade}
-              label={grade === 'all' ? 'All' : `Grade ${grade}`}
-              tabBottom={true}
-              height="xs"
-              width="xs-sm"
-              color="grades"
-              active={currentClass === grade}
-              onClick={() => handleClassChange(grade)}
-            >
-              {grade === 'all' ? 'All' : `Grade ${grade}`}
-            </Button>
-          ))}
-
-          <div className={styles.tableInfo}>
-            <p>{getTableInfoMessage()}</p>
-            {!selectedDate && (
-              <small style={{ color: '#666', display: 'block', marginTop: '4px' }}>
-                Showing today's messages only. Use date picker to view older messages.
-              </small>
+            {message.reason !== 'N/A' && !isDemo && (
+              <div className={styles.messageInfo}>Reason: {message.reason}</div>
             )}
           </div>
         </div>
 
-        <div className={styles.tableWrapper}>
-          <table className={styles.messagesTable}>
-            <thead>
-              <tr>
-                <th>GUARDIAN</th>
-                <th>STUDENT</th>
-                <th>GRADE</th>
-                <th>
-                  <div className={styles.sectionHeader}>
-                    <div className={styles.sectionHeaderRow}>
-                      <span>SECTION</span>
-                      <SectionDropdown 
-                        availableSections={availableSectionsLocal}
-                        selectedValue={selectedSection}
-                        onSelect={handleSectionFilter}
-                      />
-                    </div>
-                  </div>
-                </th>
-                <th>MESSAGE</th>
-                <th>DATE & TIME</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMessages.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className={styles.noMessage}>
-                    {getTableInfoMessage()}
-                  </td>
-                </tr>
-              ) : (
-                filteredMessages.map((message, index) => {
-                  const rowColorClass = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                  const expanded = isRowExpanded(message.id);
-                  
-                  return (
-                    <React.Fragment key={`${message.id}-${index}`}>
-                      {/* Regular row - always visible */}
-                      {renderRegularRow(message, rowColorClass, index)}
-                      {/* Expanded row - only when expanded */}
-                      {expanded && renderExpandedRow(message)}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <div className={styles.fullMessage}>
+          <div className={styles.messageInfo}>
+            <strong>Full Message:</strong>
+          </div>
+          <div className={styles.messageText}>{message.message}</div>
         </div>
       </div>
-    </div>
+    );
+  }, []);
+
+  const withColumnWidth = useCallback((width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  }), []);
+
+  const tableColumns = useMemo(() => [
+    {
+      key: 'guardian_name',
+      label: 'GUARDIAN',
+      headerStyle: withColumnWidth('21%', 160),
+      cellStyle: withColumnWidth('21%', 160),
+      renderCell: ({ row }) => (
+        <div className={styles.recipientCell}>
+          <div>{row.guardian_name}</div>
+          <small className={styles.subtext}>{row.formatted_phone}</small>
+        </div>
+      )
+    },
+    {
+      key: 'student_name',
+      label: 'STUDENT',
+      headerStyle: withColumnWidth('21%', 160),
+      cellStyle: withColumnWidth('21%', 160),
+      renderCell: ({ row }) => (
+        <div className={styles.studentCell}>
+          <div>{row.student_name}</div>
+          <small className={styles.subtext}>LRN: {row.student_lrn}</small>
+        </div>
+      )
+    },
+    {
+      key: 'grade',
+      label: 'GRADE',
+      headerStyle: withColumnWidth('9%', 80),
+      cellStyle: withColumnWidth('9%', 80),
+      renderCell: ({ row }) => row.grade
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      headerStyle: withColumnWidth('11%', 90),
+      cellStyle: withColumnWidth('11%', 90),
+      renderHeader: () => (
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeaderRow}>
+            <span>SECTION</span>
+            <SectionDropdown
+              availableSections={availableSectionsLocal}
+              selectedValue={selectedSection}
+              onSelect={handleSectionFilter}
+            />
+          </div>
+        </div>
+      ),
+      renderCell: ({ row }) => row.section
+    },
+    {
+      key: 'message',
+      label: 'MESSAGE',
+      headerStyle: withColumnWidth('24%', 220),
+      cellStyle: withColumnWidth('24%', 220),
+      renderCell: ({ row }) => {
+        const truncatedMessage = row.message.length > 80 ? `${row.message.substring(0, 80)}...` : row.message;
+        return <div className={styles.messageCell}>{truncatedMessage}</div>;
+      }
+    },
+    {
+      key: 'date_time',
+      label: 'DATE & TIME',
+      headerStyle: withColumnWidth('14%', 140),
+      cellStyle: withColumnWidth('14%', 140),
+      renderCell: ({ row }) => row.date_time
+    }
+  ], [availableSectionsLocal, handleSectionFilter, selectedSection, withColumnWidth]);
+
+  const getVisibleRowClassName = useCallback(({ row }) => {
+    return [
+      styles.messageRow,
+      expandedRowId === row.id ? styles.rowExpanded : ''
+    ].filter(Boolean).join(' ');
+  }, [expandedRowId]);
+
+  return (
+    <Table
+      columns={tableColumns}
+      rows={filteredMessages}
+      getRowId={(row) => row.id}
+      loading={loading || parentLoading}
+      error={error ? `Error: ${error}` : ''}
+      emptyMessage={getTableInfoMessage()}
+      gradeTabs={{
+        options: ['7', '8', '9', '10'],
+        currentValue: currentClass,
+        onChange: handleClassChange,
+        showAll: true,
+        allLabel: 'All',
+        renderLabel: (grade) => `Grade ${grade}`
+      }}
+      infoText={getTableInfoMessage()}
+      tableLabel="Messages"
+      onRowClick={({ rowId }) => toggleRow(rowId)}
+      rowClassName={getVisibleRowClassName}
+      expandedRowId={expandedRowId}
+      renderExpandedRow={({ row }) => renderExpandedRow(row)}
+      getExpandedRowClassName={() => styles.expandRow}
+      className={styles.messageTableContainer}
+      wrapperClassName={styles.tableWrapper}
+    />
   );
 };
 

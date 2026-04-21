@@ -1,5 +1,6 @@
 .container {
 	width: 100%;
+	--table-top-surface: linear-gradient(180deg, #f8fafc 0%, #f2f6fb 100%);
 }
 
 .topBar {
@@ -7,13 +8,14 @@
 	justify-content: flex-start;
 	align-items: center;
 	gap: 14px;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	height: 52px;
 	margin-bottom: 14px;
 	width: var(--table-content-width, 100%);
 	box-sizing: border-box;
-	padding: 10px 12px;
+	padding: 0 12px;
 	border-radius: 12px;
-	background: linear-gradient(180deg, #f8fafc 0%, #f2f6fb 100%);
+	background: var(--table-top-surface);
 	border: 1px solid #dde5ef;
 }
 
@@ -21,21 +23,23 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	min-width: 0;
 }
 
 .topBarRight {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
 }
 
 .gradeTabs {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
+	flex-wrap: nowrap;
+	overflow-x: auto;
 }
 
 .gradeTab {
@@ -64,6 +68,16 @@
 }
 
 .infoText {
+	color: #3f4f67;
+	font-size: 0.9rem;
+	font-weight: 600;
+	padding: 6px 10px;
+	border-radius: 999px;
+	background: #e8f4ef;
+	border: 1px solid #cae6dd;
+}
+
+.selectedInfoText {
 	color: #3f4f67;
 	font-size: 0.9rem;
 	font-weight: 600;
@@ -111,11 +125,18 @@
 }
 
 .head {
-	background: linear-gradient(180deg, #f6f9fd 0%, #eef3f9 100%);
+	background: var(--table-top-surface);
+}
+
+.head tr {
+	background: inherit;
+	height: 48px;
 }
 
 .headerCell {
-	padding: 14px 16px;
+	background: inherit;
+	height: 48px;
+	padding: 0 16px;
 	text-align: center;
 	font-size: 0.77rem;
 	font-weight: 800;
@@ -132,6 +153,7 @@
 }
 
 .row {
+	height: 52px;
 	transition: background-color 0.2s ease;
 }
 
@@ -148,20 +170,41 @@
 }
 
 .rowClickable:hover {
-	background: #f1f7ff;
+	background: #edf7f3;
+}
+
+.rowClickable:hover .cell {
+	color: #23344f;
 }
 
 .rowExpanded {
 	background: transparent;
 }
 
+.rowSelected {
+	background: #edf7f3 !important;
+}
+
+.rowSelected:hover {
+	background: #e2f1eb !important;
+}
+
 .cell {
-	padding: 14px 16px;
+	height: 52px;
+	padding: 0 16px;
 	text-align: center;
 	color: #2b3a51;
 	font-size: 0.96rem;
 	border-bottom: 1px solid #e9eef5;
 	vertical-align: middle;
+}
+
+.iconColumnHeader,
+.iconColumnCell {
+	width: 56px;
+	min-width: 56px;
+	max-width: 56px;
+	padding: 0;
 }
 
 .expandedRow {
@@ -186,7 +229,7 @@
 @media (max-width: 768px) {
 	.topBar {
 		align-items: stretch;
-		padding: 10px;
+		padding: 0 10px;
         width:var(--table-content-width,100%);
 	}
 

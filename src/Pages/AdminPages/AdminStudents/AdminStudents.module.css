@@ -11,33 +11,27 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 15px;
-  /* Add padding or max-width to prevent touching edges */
   max-width: 100%; /* Ensure it doesn't overflow */
   box-sizing: border-box; /* Include padding in width calculation */
 }
 
-.searchAndFilter {
+.topLeft {
   display: flex;
   align-items: center;
-  flex: 1;
-  min-width: 300px;
-  max-width: 70%; /* Prevent from taking too much space */
+  gap: 10px;
+}
+
+.topRight {
+  display: flex;
+  gap: 15px;
+  margin-right: 37px;
 }
 
 .bulkActions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 15px;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
-
-.addButtons {
-  display: flex;
-  /* Add margin to the right to prevent touching edge */
-  margin-right: 15px;
-}
-
 /* Optional: Add responsive behavior */
 @media (max-width: 768px) {
   .top {

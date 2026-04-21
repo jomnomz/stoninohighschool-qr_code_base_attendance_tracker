@@ -1,10 +1,68 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import styles from './TeacherAttendance.module.css';
 import PageLabel from "../../../Components/UI/Labels/PageLabel/PageLabel.jsx";
 import AttendanceCard from '../../../Components/UI/Cards/AttendanceCard/AttendanceCard.jsx';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from '../../../Components/Authentication/AuthProvider/AuthProvider.jsx';
+import SectionLabel from '../../../Components/UI/Labels/SectionLabel/SectionLabel.jsx';
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+const getTeacherAttendanceCacheKey = (userId, email) => {
+  if (userId) {
+    return `teacher-attendance-classes:${userId}`;
+  }
+
+  if (email) {
+    return `teacher-attendance-classes:${email}`;
+  }
+
+  return '';
+};
+
+const readCachedClasses = (cacheKey) => {
+  if (!cacheKey) {
+    return null;
+  }
+
+  try {
+    const cachedValue = sessionStorage.getItem(cacheKey);
+
+    if (!cachedValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(cachedValue);
+
+    if (!Array.isArray(parsed?.classes)) {
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('Failed to read teacher attendance cache:', error);
+    return null;
+  }
+};
+
+const writeCachedClasses = (cacheKey, classes) => {
+  if (!cacheKey) {
+    return;
+  }
+
+  try {
+    sessionStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        classes,
+        timestamp: Date.now()
+      })
+    );
+  } catch (error) {
+    console.error('Failed to write teacher attendance cache:', error);
+  }
+};
 
 function TeacherAttendance() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -12,51 +70,12 @@ function TeacherAttendance() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (!authLoading && user && profile) {
-      fetchTeacherClasses();
-    }
-  }, [authLoading, user, profile]);
+  const cacheKey = useMemo(
+    () => getTeacherAttendanceCacheKey(user?.id, profile?.email),
+    [user?.id, profile?.email]
+  );
 
-  const fetchTeacherClasses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('🔄 Starting fetchTeacherClasses');
-      
-      if (!user || !profile) {
-        setError('Please log in to view your classes');
-        setLoading(false);
-        return;
-      }
-      
-      if (profile.role !== 'teacher') {
-        setError('This page is for teachers only');
-        setLoading(false);
-        return;
-      }
-      
-      // Get teacher ID
-      const teacherId = await getTeacherId();
-      
-      if (!teacherId) {
-        setError('Teacher account not found. Please contact administration.');
-        setLoading(false);
-        return;
-      }
-      
-      console.log(`✅ Got teacher ID: ${teacherId}`);
-      await fetchTeacherClassesById(teacherId);
-      
-    } catch (err) {
-      console.error('❌ Error in fetchTeacherClasses:', err);
-      setError('Failed to load classes. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const getTeacherId = async () => {
+  const getTeacherId = useCallback(async () => {
     try {
       // Use the proxy - relative URL
       if (user?.id) {
@@ -119,10 +138,16 @@ function TeacherAttendance() {
       console.error('❌ Error getting teacher ID:', err.message);
       return null;
     }
-  };
+  }, [profile?.email, user?.id]);
 
-  const fetchTeacherClassesById = async (teacherId) => {
+  const fetchTeacherClassesById = useCallback(async (teacherId, options = {}) => {
+    const { silent = false } = options;
+
     try {
+      if (!silent) {
+        setLoading(true);
+      }
+
       console.log(`📚 Fetching classes for teacher ID: ${teacherId}`);
       
       const response = await fetch(`/api/teacher-invite/teacher-classes/${teacherId}`, {
@@ -143,6 +168,8 @@ function TeacherAttendance() {
       
       if (data.success) {
         setClasses(data.classes);
+        writeCachedClasses(cacheKey, data.classes);
+        setError(null);
         console.log(`✅ Loaded ${data.classes.length} classes`);
       } else {
         setError(data.error || 'Failed to load classes');
@@ -153,7 +180,76 @@ function TeacherAttendance() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [cacheKey]);
+
+  const fetchTeacherClasses = useCallback(async (options = {}) => {
+    const { silent = false } = options;
+
+    try {
+      if (!silent) {
+        setLoading(true);
+      }
+
+      setError(null);
+      
+      console.log('🔄 Starting fetchTeacherClasses');
+      
+      if (!user || !profile) {
+        setError('Please log in to view your classes');
+        setLoading(false);
+        return;
+      }
+      
+      if (profile.role !== 'teacher') {
+        setError('This page is for teachers only');
+        setLoading(false);
+        return;
+      }
+      
+      const teacherId = await getTeacherId();
+      
+      if (!teacherId) {
+        setError('Teacher account not found. Please contact administration.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log(`✅ Got teacher ID: ${teacherId}`);
+      await fetchTeacherClassesById(teacherId, { silent });
+      
+    } catch (err) {
+      console.error('❌ Error in fetchTeacherClasses:', err);
+      setError('Failed to load classes. Please try again.');
+      setLoading(false);
+    }
+  }, [fetchTeacherClassesById, getTeacherId, profile, user]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user || !profile) {
+      setClasses([]);
+      setLoading(false);
+      setError('Please log in to view your classes');
+      return;
+    }
+
+    const cached = readCachedClasses(cacheKey);
+    const hasCachedClasses = cached && Array.isArray(cached.classes);
+    const isCacheFresh = hasCachedClasses && Date.now() - (cached.timestamp || 0) < CACHE_TTL_MS;
+
+    if (hasCachedClasses) {
+      setClasses(cached.classes);
+      setLoading(false);
+      setError(null);
+    }
+
+    if (!hasCachedClasses || !isCacheFresh) {
+      fetchTeacherClasses({ silent: hasCachedClasses });
+    }
+  }, [authLoading, cacheKey, fetchTeacherClasses, profile, user]);
 
   // Handler for when a card is clicked
   const handleCardClick = (className) => {
@@ -208,7 +304,7 @@ function TeacherAttendance() {
         />
         <div className={styles.errorContainer}>
           <p className={styles.errorText}>{error}</p>
-          <button onClick={fetchTeacherClasses} className={styles.retryButton}>
+          <button onClick={() => fetchTeacherClasses()} className={styles.retryButton}>
             Try Again
           </button>
         </div>
@@ -218,8 +314,7 @@ function TeacherAttendance() {
 
   return (
     <main className={styles.main}>
-      <PageLabel 
-        icon={<FontAwesomeIcon icon={faClipboardCheck} />}  
+      <SectionLabel  
         label="Daily Attendance Record for Each Class"
       />
       
@@ -229,7 +324,7 @@ function TeacherAttendance() {
           <h3>No Classes Assigned</h3>
           <p>You don't have any classes assigned yet.</p>
           <p>Contact the school administration to get your teaching assignments.</p>
-          <button onClick={fetchTeacherClasses} className={styles.retryButton}>
+          <button onClick={() => fetchTeacherClasses()} className={styles.retryButton}>
             Refresh
           </button>
         </div>

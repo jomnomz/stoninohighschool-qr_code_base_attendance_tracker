@@ -2,66 +2,13 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  --table-content-width: 98%;
 }
 
 .tableWrapper {
-  max-height: 59vh;
+  max-height: 66vh;
   overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
   width: 98%;
-}
-
-.tableWrapper table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  table-layout: auto;
-}
-
-.tableWrapper thead th {
-  position: sticky;
-  top: 0;
-  background-color: #f2f2f2;
-  z-index: 10;
-  box-shadow: 0 1px 0 #e0e0e0;
-}
-
-th {
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
-}
-
-td, th {
-  text-align: center;
-  padding: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-tbody tr {
-  margin: 0;
-  padding: 0;
-  border-spacing: 0;
-}
-
-.rowEven {
-  background-color: white !important;
-}
-
-.rowOdd {
-  background-color: #f2f2f2 !important;
-}
-
-.gradeSectionRow:hover {
-  background-color: #8a8a8a !important;
-  cursor: pointer;
-}
-
-.gradeSectionRow:hover td {
-  color: white;
 }
 
 .gradeSectionCard {
@@ -276,14 +223,6 @@ tbody tr {
   background-color: inherit;
 }
 
-.selectedRow {
-  background-color: #e3f2fd !important;
-}
-
-.selectedRow:hover {
-  background-color: #bbdefb !important;
-}
-
 .errorRow {
   background-color: #ffebee !important;
 }
@@ -308,43 +247,6 @@ tbody tr {
   background-color: #ffebee;
 }
 
-/* Column widths using percentages */
-.tableWrapper table th:nth-child(1),
-.tableWrapper table td:nth-child(1) {
-  width: 5%;
-  min-width: 40px;
-}
-
-.tableWrapper table th:nth-child(2),
-.tableWrapper table td:nth-child(2) {
-  width: 15%;
-  min-width: 100px;
-}
-
-.tableWrapper table th:nth-child(3),
-.tableWrapper table td:nth-child(3) {
-  width: 35%;
-  min-width: 150px;
-}
-
-.tableWrapper table th:nth-child(4),
-.tableWrapper table td:nth-child(4) {
-  width: 10%;
-  min-width: 80px;
-}
-
-.tableWrapper table th:nth-child(5),
-.tableWrapper table td:nth-child(5) {
-  width: 10%;
-  min-width: 70px;
-}
-
-.tableWrapper table th:nth-child(6),
-.tableWrapper table td:nth-child(6) {
-  width: 10%;
-  min-width: 70px;
-}
-
 .action-button {
   cursor: pointer;
 }
@@ -363,15 +265,4 @@ tbody tr {
 }
 
 @media (max-width: 768px) {
-  .tableWrapper table th:nth-child(3),
-  .tableWrapper table td:nth-child(3) {
-    width: 30%;
-    min-width: 120px;
-  }
-  
-  .tableWrapper table th:nth-child(2),
-  .tableWrapper table td:nth-child(2) {
-    width: 12%;
-    min-width: 80px;
-  }
 }

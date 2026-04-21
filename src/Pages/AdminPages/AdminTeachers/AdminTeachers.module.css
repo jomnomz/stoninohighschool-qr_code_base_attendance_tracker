@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     gap: 25px;
-    padding: 0 20px 0 0
+    margin-top: 20px;
 }
 
 .top {
@@ -11,27 +11,26 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 15px;
+  max-width: 100%; /* Ensure it doesn't overflow */
+  box-sizing: border-box; /* Include padding in width calculation */
 }
 
-.searchAndFilter {
+.topLeft {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.topRight {
+  display: flex;
   gap: 15px;
-  flex: 1;
-  min-width: 300px;
+  margin-right: 37px;
 }
 
 .bulkActions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 15px;
-}
-
-.addButtons {
-  display: flex;
-  gap: 10px;
-  margin-right: 15px; 
 }
 
 /* Responsive adjustments */

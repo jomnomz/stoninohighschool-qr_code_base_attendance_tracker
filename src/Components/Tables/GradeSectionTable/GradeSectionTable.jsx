@@ -6,6 +6,7 @@ import { useRowExpansion } from '../../Hooks/useRowExpansion';
 import DeleteEntityModal from '../../Modals/DeleteEntityModal/DeleteEntityModal';
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { supabase } from '../../../lib/supabase';
+import Table from '../Table/Table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPenToSquare, 
@@ -156,7 +157,9 @@ const GradeSectionTable = ({
   searchTerm = '',
   onSelectedGradeSectionsUpdate,
   selectedGradeSections = [],
-  onSingleDeleteClick
+  onSingleDeleteClick,
+  onEntityDataUpdate,
+  onInfoTextChange
 }) => {
   const [gradeSections, setGradeSections] = useState([]);
   const [grades, setGrades] = useState([]);
@@ -544,210 +547,193 @@ const GradeSectionTable = ({
     const updatedAt = gradeSection.updated_at ? formatDateTimeLocal(gradeSection.updated_at) : 'Never updated';
     
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(gradeSection.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="5">
-          <div 
-            className={`${styles.gradeSectionCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.gradeSectionHeader}>
-              Grade {gradeSection.grade} - Section {gradeSection.section}
+      <div 
+        className={`${styles.gradeSectionCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.gradeSectionHeader}>
+          Grade {gradeSection.grade} - Section {gradeSection.section}
+        </div>
+        <div className={styles.details}>
+          <div>
+            <div className={styles.gradeSectionInfo}>
+              <strong>Grade Section Details</strong>
             </div>
-            <div className={styles.details}>
-              <div>
-                <div className={styles.gradeSectionInfo}>
-                  <strong>Grade Section Details</strong>
-                </div>
-                <div className={styles.gradeSectionInfo}>Grade Level: {gradeSection.grade}</div>
-                <div className={styles.gradeSectionInfo}>Section: {gradeSection.section}</div>
-              </div>
-              
-              <div>
-                <div className={styles.gradeSectionInfo}>
-                  <strong>Record Information</strong>
-                </div>
-                <div className={styles.gradeSectionInfo}>Added: {addedAt}</div>
-                <div className={styles.gradeSectionInfo}>Last Updated: {updatedAt}</div>
-              </div>
-            </div>
+            <div className={styles.gradeSectionInfo}>Grade Level: {gradeSection.grade}</div>
+            <div className={styles.gradeSectionInfo}>Section: {gradeSection.section}</div>
           </div>
-        </td>
-      </tr>
+          
+          <div>
+            <div className={styles.gradeSectionInfo}>
+              <strong>Record Information</strong>
+            </div>
+            <div className={styles.gradeSectionInfo}>Added: {addedAt}</div>
+            <div className={styles.gradeSectionInfo}>Last Updated: {updatedAt}</div>
+          </div>
+        </div>
+      </div>
     );
   };
-
-  // Loading state
-  if (loading) return (
-    <div className={styles.gradeSectionTableContainer}>
-      <div className={styles.loading}>Loading grade sections...</div>
-    </div>
-  );
-  
-  if (error) return (
-    <div className={styles.gradeSectionTableContainer}>
-      <div className={styles.error}>Error: {error}</div>
-    </div>
-  );
 
   const getTableInfoMessage = () => {
     const sectionCount = filteredGradeSections.length;
-    const selectedCount = selectedGradeSections.length;
     
     if (searchTerm) {
-      return `Found ${sectionCount} grade section/s matching "${searchTerm}"${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+      return `Found ${sectionCount} grade section/s matching "${searchTerm}"`;
     }
     
-    return `Showing ${sectionCount} grade section/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+    return `Showing ${sectionCount} grade section/s`;
   };
 
-  const renderRegularRow = (gradeSection, rowColorClass, visibleRowIndex, isSelected) => {
-    const isEditing = editingId === gradeSection.id;
-    
-    return (
-      <tr 
-        key={gradeSection.id}
-        className={`${styles.gradeSectionRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-        onClick={() => toggleRow(gradeSection.id)}
-      >
-        <td>
-          <div className={styles.icon} onClick={(e) => handleGradeSectionSelect(gradeSection.id, e)}>
+  useEffect(() => {
+    if (onInfoTextChange) {
+      onInfoTextChange(getTableInfoMessage());
+    }
+  }, [onInfoTextChange, searchTerm, filteredGradeSections.length, selectedGradeSections.length]);
+
+  useEffect(() => {
+    if (onEntityDataUpdate) {
+      onEntityDataUpdate(gradeSections);
+    }
+  }, [gradeSections, onEntityDataUpdate]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
+
+  const columns = [
+    {
+      key: 'select',
+      label: '',
+      headerStyle: withColumnWidth('5%', 40),
+      cellStyle: withColumnWidth('5%', 40),
+      renderHeader: () => (
+        <div className={styles.icon} onClick={handleSelectAll}>
+          <FontAwesomeIcon 
+            icon={allVisibleSelected ? fasCircle : farCircleRegular}
+            style={{ cursor: 'pointer', color: allVisibleSelected ? '#0f6b58' : '' }}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const isSelected = selectedGradeSections.includes(row.id);
+        return (
+          <div className={styles.icon} onClick={(e) => handleGradeSectionSelect(row.id, e)}>
             <FontAwesomeIcon 
-              icon={isSelected ? fasCircle : farCircleRegular} 
-              style={{ 
-                cursor: 'pointer', 
-                color: isSelected ? '#007bff' : '' 
-              }}
+              icon={isSelected ? fasCircle : farCircleRegular}
+              style={{ cursor: 'pointer', color: isSelected ? '#0f6b58' : '' }}
             />
           </div>
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <select
-              value={editFormData.grade || ''}
-              onChange={(e) => updateEditField('grade', e.target.value)}
-              className={`${styles.editSelect} ${validationErrors.grade ? styles.errorInput : ''}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <option value="">Select Grade</option>
-              {grades.map(grade => (
-                <option key={grade.id} value={grade.grade_level}>
-                  Grade {grade.grade_level}
-                </option>
-              ))}
-            </select>
-          ) : (
-            `Grade ${gradeSection.grade}`
-          )}
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editFormData.section || ''}
-              onChange={(e) => updateEditField('section', e.target.value)}
-              className={`${styles.editInput} ${validationErrors.section ? styles.errorInput : ''}`}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="Section name"
-            />
-          ) : (
-            gradeSection.section
-          )}
-        </td>
-        
-        <td>
-          {renderEditCell(gradeSection)}
-        </td>
-        
-        <td>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faTrashCan} 
-              className="action-button"
-              onClick={(e) => handleDeleteClick(gradeSection, e)}
-            />
-          </div>
-        </td>
-      </tr>
-    );
-  };
+        );
+      }
+    },
+    {
+      key: 'grade',
+      label: 'GRADE LEVEL',
+      headerStyle: withColumnWidth('25%', 100),
+      cellStyle: withColumnWidth('25%', 100),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return `Grade ${row.grade}`;
+
+        return (
+          <select
+            value={editFormData.grade || ''}
+            onChange={(e) => updateEditField('grade', e.target.value)}
+            className={`${styles.editSelect} ${validationErrors.grade ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="">Select Grade</option>
+            {grades.map(grade => (
+              <option key={grade.id} value={grade.grade_level}>
+                Grade {grade.grade_level}
+              </option>
+            ))}
+          </select>
+        );
+      }
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      headerStyle: withColumnWidth('50%', 150),
+      cellStyle: withColumnWidth('50%', 150),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return row.section;
+
+        return (
+          <input
+            type="text"
+            value={editFormData.section || ''}
+            onChange={(e) => updateEditField('section', e.target.value)}
+            className={`${styles.editInput} ${validationErrors.section ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Section name"
+          />
+        );
+      }
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      headerStyle: withColumnWidth('10%', 80),
+      cellStyle: withColumnWidth('10%', 80),
+      renderCell: ({ row }) => renderEditCell(row)
+    },
+    {
+      key: 'delete',
+      label: 'DELETE',
+      headerStyle: withColumnWidth('10%', 70),
+      cellStyle: withColumnWidth('10%', 70),
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faTrashCan}
+            className="action-button"
+            onClick={(e) => handleDeleteClick(row, e)}
+          />
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className={styles.gradeSectionTableContainer} ref={tableRef}>
-      {/* Table info */}
-      <div className={styles.tableInfo}>
-        <p>{getTableInfoMessage()}</p>
-        {updatingStudents && (
-          <p className={styles.syncNote}>Updating student records...</p>
-        )}
-      </div>
+      <Table
+        columns={columns}
+        rows={filteredGradeSections}
+        getRowId={(row) => row.id}
+        loading={loading}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={getTableInfoMessage()}
+        containerRef={tableRef}
+        tableLabel="Grade and section records"
+        onRowClick={({ row }) => toggleRow(row.id)}
+        isRowSelected={({ row }) => selectedGradeSections.includes(row.id)}
+        rowClassName={({ row }) => {
+          const isEditing = editingId === row.id;
+          return `${styles.gradeSectionRow} ${isEditing ? styles.editingRow : ''}`;
+        }}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedRow(row)}
+        persistExpandedRows
+        hideMainRowWhenExpanded
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        stickyHeader
+        className={styles.tableContainer}
+        wrapperClassName={styles.tableWrapper}
+      />
 
-      <div className={styles.tableWrapper}>
-        <table className={styles.gradeSectionsTable}>
-          <thead>
-            <tr>
-              <th>
-                <div className={styles.icon} onClick={handleSelectAll}>
-                  <FontAwesomeIcon 
-                    icon={allVisibleSelected ? fasCircle : farCircleRegular} 
-                    style={{ 
-                      cursor: 'pointer',
-                      color: allVisibleSelected ? '#007bff' : '' 
-                    }}
-                  />
-                </div>
-              </th>
-              <th>GRADE LEVEL</th>
-              <th>SECTION</th>
-              <th>EDIT</th>
-              <th>DELETE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredGradeSections.length === 0 ? (
-              <tr>
-                <td colSpan="5" className={styles.noGradeSection}>
-                  {getTableInfoMessage()}
-                </td>
-              </tr>
-            ) : (
-              filteredGradeSections.map((gradeSection, index) => {
-                const visibleRowIndex = filteredGradeSections
-                  .slice(0, index)
-                  .filter(s => !isRowExpanded(s.id))
-                  .length;
-                
-                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                const isSelected = selectedGradeSections.includes(gradeSection.id);
-
-                return (
-                  <React.Fragment key={gradeSection.id}>
-                    {/* Only show regular row if NOT expanded */}
-                    {!isRowExpanded(gradeSection.id) && (
-                      renderRegularRow(gradeSection, rowColorClass, visibleRowIndex, isSelected)
-                    )}
-                    {/* Always render expanded row (it will be hidden if not active) */}
-                    {renderExpandedRow(gradeSection)}
-                    {/* ERROR ROW - Only when editing has errors */}
-                    {editingId === gradeSection.id && Object.keys(validationErrors).length > 0 && (
-                      <tr className={styles.errorRow}>
-                        <td colSpan="5" className={styles.errorMessages}>
-                          {Object.values(validationErrors).map((error, idx) => (
-                            <div key={idx} className={styles.errorMessage}>
-                              {error}
-                            </div>
-                          ))}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {(updatingStudents || Object.keys(validationErrors).length > 0) && (
+        <div className={styles.tableInfo}>
+          {updatingStudents && <p className={styles.syncNote}>Updating student records...</p>}
+          {Object.keys(validationErrors).length > 0 && (
+            <p className={styles.errorMessage}>{Object.values(validationErrors)[0]}</p>
+          )}
+        </div>
+      )}
 
       <DeleteEntityModal
         isOpen={isDeleteModalOpen}

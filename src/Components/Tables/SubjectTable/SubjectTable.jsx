@@ -6,6 +6,7 @@ import { useEntityEdit } from '../../Hooks/useEntityEdit';
 import DeleteEntityModal from '../../Modals/DeleteEntityModal/DeleteEntityModal';
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { supabase } from '../../../lib/supabase';
+import Table from '../Table/Table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPenToSquare, 
@@ -43,7 +44,9 @@ const SubjectTable = ({
   searchTerm = '',
   onSelectedSubjectsUpdate,
   selectedSubjects = [],
-  onSingleDeleteClick
+  onSingleDeleteClick,
+  onEntityDataUpdate,
+  onInfoTextChange
 }) => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,204 +254,184 @@ const SubjectTable = ({
     const updatedAt = subject.updated_at ? formatDateTimeLocal(subject.updated_at) : 'Never updated';
     
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(subject.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="5">
-          <div 
-            className={`${styles.subjectCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.subjectHeader}>
-              {subject.subject_code} - {subject.subject_name}
+      <div 
+        className={`${styles.subjectCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.subjectHeader}>
+          {subject.subject_code} - {subject.subject_name}
+        </div>
+        <div className={styles.details}>
+          <div>
+            <div className={styles.subjectInfo}>
+              <strong>Subject Details</strong>
             </div>
-            <div className={styles.details}>
-              <div>
-                <div className={styles.subjectInfo}>
-                  <strong>Subject Details</strong>
-                </div>
-                <div className={styles.subjectInfo}>Subject Code: {subject.subject_code}</div>
-                <div className={styles.subjectInfo}>Subject Name: {subject.subject_name}</div>
-              </div>
-              
-              <div>
-                <div className={styles.subjectInfo}>
-                  <strong>Record Information</strong>
-                </div>
-                <div className={styles.subjectInfo}>Added: {addedAt}</div>
-                <div className={styles.subjectInfo}>Last Updated: {updatedAt}</div>
-              </div>
-            </div>
+            <div className={styles.subjectInfo}>Subject Code: {subject.subject_code}</div>
+            <div className={styles.subjectInfo}>Subject Name: {subject.subject_name}</div>
           </div>
-        </td>
-      </tr>
+          
+          <div>
+            <div className={styles.subjectInfo}>
+              <strong>Record Information</strong>
+            </div>
+            <div className={styles.subjectInfo}>Added: {addedAt}</div>
+            <div className={styles.subjectInfo}>Last Updated: {updatedAt}</div>
+          </div>
+        </div>
+      </div>
     );
   };
-
-  // Loading state
-  if (loading) return (
-    <div className={styles.subjectTableContainer}>
-      <div className={styles.loading}>Loading subjects...</div>
-    </div>
-  );
-  
-  // Error state
-  if (error) return (
-    <div className={styles.subjectTableContainer}>
-      <div className={styles.error}>Error: {error}</div>
-    </div>
-  );
 
   // Get table info message
   const getTableInfoMessage = () => {
     const subjectCount = filteredSubjects.length;
-    const selectedCount = selectedSubjects.length;
     
     if (searchTerm) {
-      return `Found ${subjectCount} subject/s matching "${searchTerm}"${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+      return `Found ${subjectCount} subject/s matching "${searchTerm}"`;
     }
     
-    return `Showing ${subjectCount} subject/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+    return `Showing ${subjectCount} subject/s`;
   };
 
-  // Render regular row (only shows when NOT expanded)
-  const renderRegularRow = (subject, rowColorClass, visibleRowIndex, isSelected) => {
-    const isEditing = editingId === subject.id;
-    
-    return (
-      <tr 
-        key={subject.id}
-        className={`${styles.subjectRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-        onClick={() => toggleRow(subject.id)}
-      >
-        <td>
-          <div className={styles.icon} onClick={(e) => handleSubjectSelect(subject.id, e)}>
+  useEffect(() => {
+    if (onInfoTextChange) {
+      onInfoTextChange(getTableInfoMessage());
+    }
+  }, [onInfoTextChange, searchTerm, filteredSubjects.length, selectedSubjects.length]);
+
+  useEffect(() => {
+    if (onEntityDataUpdate) {
+      onEntityDataUpdate(subjects);
+    }
+  }, [subjects, onEntityDataUpdate]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
+
+  const columns = [
+    {
+      key: 'select',
+      label: '',
+      headerStyle: withColumnWidth('5%', 40),
+      cellStyle: withColumnWidth('5%', 40),
+      renderHeader: () => (
+        <div className={styles.icon} onClick={handleSelectAll}>
+          <FontAwesomeIcon 
+            icon={allVisibleSelected ? fasCircle : farCircleRegular}
+            style={{ cursor: 'pointer', color: allVisibleSelected ? '#0f6b58' : '' }}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const isSelected = selectedSubjects.includes(row.id);
+        return (
+          <div className={styles.icon} onClick={(e) => handleSubjectSelect(row.id, e)}>
             <FontAwesomeIcon 
-              icon={isSelected ? fasCircle : farCircleRegular} 
-              style={{ 
-                cursor: 'pointer', 
-                color: isSelected ? '#007bff' : '' 
-              }}
+              icon={isSelected ? fasCircle : farCircleRegular}
+              style={{ cursor: 'pointer', color: isSelected ? '#0f6b58' : '' }}
             />
           </div>
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editFormData.subject_code || ''}
-              onChange={(e) => updateEditField('subject_code', e.target.value.toUpperCase())}
-              className={`${styles.editInput} ${validationErrors.subject_code ? styles.errorInput : ''}`}
-              style={{ textTransform: 'uppercase' }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            subject.subject_code
-          )}
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <input
-              type="text"
-              value={editFormData.subject_name || ''}
-              onChange={(e) => updateEditField('subject_name', e.target.value)}
-              className={`${styles.editInput} ${validationErrors.subject_name ? styles.errorInput : ''}`}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            subject.subject_name
-          )}
-        </td>
-        
-        <td>
-          {renderEditCell(subject)}
-        </td>
-        
-        <td>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faTrashCan} 
-              className="action-button"
-              onClick={(e) => handleDeleteClick(subject, e)}
-            />
-          </div>
-        </td>
-      </tr>
-    );
-  };
+        );
+      }
+    },
+    {
+      key: 'subject_code',
+      label: 'SUBJECT CODE',
+      headerStyle: withColumnWidth('20%', 120),
+      cellStyle: withColumnWidth('20%', 120),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return row.subject_code;
+
+        return (
+          <input
+            type="text"
+            value={editFormData.subject_code || ''}
+            onChange={(e) => updateEditField('subject_code', e.target.value.toUpperCase())}
+            className={`${styles.editInput} ${validationErrors.subject_code ? styles.errorInput : ''}`}
+            style={{ textTransform: 'uppercase' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      }
+    },
+    {
+      key: 'subject_name',
+      label: 'SUBJECT NAME',
+      headerStyle: withColumnWidth('55%', 200),
+      cellStyle: withColumnWidth('55%', 200),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return row.subject_name;
+
+        return (
+          <input
+            type="text"
+            value={editFormData.subject_name || ''}
+            onChange={(e) => updateEditField('subject_name', e.target.value)}
+            className={`${styles.editInput} ${validationErrors.subject_name ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      }
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      headerStyle: withColumnWidth('10%', 70),
+      cellStyle: withColumnWidth('10%', 70),
+      renderCell: ({ row }) => renderEditCell(row)
+    },
+    {
+      key: 'delete',
+      label: 'DELETE',
+      headerStyle: withColumnWidth('10%', 70),
+      cellStyle: withColumnWidth('10%', 70),
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faTrashCan}
+            className="action-button"
+            onClick={(e) => handleDeleteClick(row, e)}
+          />
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className={styles.subjectTableContainer} ref={tableRef}>
-      {/* Table info similar to other tables */}
-      <div className={styles.tableInfo}>
-        <p>{getTableInfoMessage()}</p>
-      </div>
+      <Table
+        columns={columns}
+        rows={filteredSubjects}
+        getRowId={(row) => row.id}
+        loading={loading}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={getTableInfoMessage()}
+        containerRef={tableRef}
+        tableLabel="Subject records"
+        onRowClick={({ row }) => toggleRow(row.id)}
+        isRowSelected={({ row }) => selectedSubjects.includes(row.id)}
+        rowClassName={({ row }) => {
+          const isEditing = editingId === row.id;
+          return `${styles.subjectRow} ${isEditing ? styles.editingRow : ''}`;
+        }}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedRow(row)}
+        persistExpandedRows
+        hideMainRowWhenExpanded
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        stickyHeader
+        wrapperClassName={styles.tableWrapper}
+      />
 
-      <div className={styles.tableWrapper}>
-        <table>
-          <thead>
-            <tr>
-              <th>
-                <div className={styles.icon} onClick={handleSelectAll}>
-                  <FontAwesomeIcon 
-                    icon={allVisibleSelected ? fasCircle : farCircleRegular} 
-                    style={{ 
-                      cursor: 'pointer',
-                      color: allVisibleSelected ? '#007bff' : '' 
-                    }}
-                  />
-                </div>
-              </th>
-              <th>SUBJECT CODE</th>
-              <th>SUBJECT NAME</th>
-              <th>EDIT</th>
-              <th>DELETE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSubjects.length === 0 ? (
-              <tr>
-                <td colSpan="5" className={styles.noSubject}>
-                  {getTableInfoMessage()}
-                </td>
-              </tr>
-            ) : (
-              filteredSubjects.map((subject, index) => {
-                const visibleRowIndex = filteredSubjects
-                  .slice(0, index)
-                  .filter(s => !isRowExpanded(s.id))
-                  .length;
-                
-                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                const isSelected = selectedSubjects.includes(subject.id);
-
-                return (
-                  <React.Fragment key={subject.id}>
-                    {/* Only show regular row if NOT expanded */}
-                    {!isRowExpanded(subject.id) && (
-                      renderRegularRow(subject, rowColorClass, visibleRowIndex, isSelected)
-                    )}
-                    {/* Always render expanded row (it will be hidden if not active) */}
-                    {renderExpandedRow(subject)}
-                    {/* ERROR ROW - Only when editing has errors */}
-                    {editingId === subject.id && Object.keys(validationErrors).length > 0 && (
-                      <tr className={styles.errorRow}>
-                        <td colSpan="5" className={styles.errorMessages}>
-                          {Object.values(validationErrors).map((error, idx) => (
-                            <div key={idx} className={styles.errorMessage}>
-                              {error}
-                            </div>
-                          ))}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {Object.keys(validationErrors).length > 0 && (
+        <div className={styles.tableInfo}>
+          <p className={styles.errorMessage}>{Object.values(validationErrors)[0]}</p>
+        </div>
+      )}
 
       <DeleteEntityModal
         isOpen={isDeleteModalOpen}

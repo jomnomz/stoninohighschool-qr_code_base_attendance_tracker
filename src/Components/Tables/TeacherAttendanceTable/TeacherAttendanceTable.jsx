@@ -1,19 +1,44 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { formatStudentName, formatNA } from '../../../Utils/Formatters';
 import { sortEntities } from '../../../Utils/SortEntities';
 import styles from './TeacherAttendanceTable.module.css';
 import { supabase } from '../../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays } from '@fortawesome/free-solid-svg-icons';
 import Input from '../../../Components/UI/Input/Input.jsx';
+import Table from '../Table/Table.jsx';
+import EntityDropdown from '../../UI/Buttons/EntityDropdown/EntityDropdown.jsx';
 
-const TeacherAttendanceTable = ({ 
+const STATUS_OPTIONS = [
+  { label: 'Present', value: 'present' },
+  { label: 'Late', value: 'late' },
+  { label: 'Absent', value: 'absent' }
+];
+
+const getPHDateIso = (date = new Date()) => {
+  const phTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+  return phTime.toISOString().split('T')[0];
+};
+
+const formatDateOption = (dateString) => {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  const phTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+
+  return phTime.toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+function TeacherAttendanceTable({
   className,
-  subject
-}) => {
+  subject,
+  schoolYear
+}) {
   const [attendances, setAttendances] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [displayDate, setDisplayDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -21,53 +46,43 @@ const TeacherAttendanceTable = ({
   const [availableDates, setAvailableDates] = useState([]);
   const [datesLoading, setDatesLoading] = useState(false);
 
-  const getCurrentPhilippinesDate = useCallback(() => {
-    const now = new Date();
-    const phTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-    return phTime.toISOString().split('T')[0];
-  }, []);
+  const activeDate = selectedDate || getPHDateIso();
 
-  const getPhilippinesDisplayDate = useCallback(() => {
-    const dateToUse = selectedDate || getCurrentPhilippinesDate();
-    const date = new Date(dateToUse + 'T00:00:00Z');
+  const getPhilippinesDisplayDate = useCallback((dateString) => {
+    const date = new Date(`${dateString}T00:00:00Z`);
     const phTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+
     return phTime.toLocaleDateString('en-PH', {
       timeZone: 'Asia/Manila',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-  }, [selectedDate, getCurrentPhilippinesDate]);
+  }, []);
 
-  const getCurrentDatabaseDate = useCallback(() => {
-    if (selectedDate) {
-      return selectedDate;
+  const parseClassName = useCallback((value) => {
+    if (!value) {
+      return { grade: null, section: null };
     }
-    
-    return getCurrentPhilippinesDate();
-  }, [selectedDate, getCurrentPhilippinesDate]);
 
-  const parseClassName = useCallback((className) => {
-    if (!className) return { grade: null, section: null };
-    
-    const match = className.match(/^(\d+)[-\s](.+)$/);
+    const match = value.match(/^(\d+)[-\s](.+)$/);
+
     if (match) {
-      return { 
-        grade: match[1].trim(), 
-        section: match[2].trim() 
+      return {
+        grade: match[1].trim(),
+        section: match[2].trim()
       };
     }
-    
+
     return { grade: null, section: null };
   }, []);
 
   const findSectionId = useCallback(async (grade, sectionName) => {
     try {
-      // Get grade ID first
       const { data: gradeData, error: gradeError } = await supabase
         .from('grades')
         .select('id')
-        .eq('grade_level', parseInt(grade))
+        .eq('grade_level', parseInt(grade, 10))
         .single();
 
       if (gradeError || !gradeData) {
@@ -88,25 +103,29 @@ const TeacherAttendanceTable = ({
       }
 
       return sectionData.id;
-    } catch (err) {
-      console.error('Error in findSectionId:', err);
+    } catch (fetchError) {
+      console.error('Error in findSectionId:', fetchError);
       return null;
     }
   }, []);
 
   const fetchAvailableDates = useCallback(async () => {
-    if (!className) return;
+    if (!className) {
+      return;
+    }
 
     setDatesLoading(true);
+
     try {
       const { grade, section } = parseClassName(className);
-      
+
       if (!grade || !section) {
-        console.error('Invalid class name format:', className);
+        setAvailableDates([]);
         return;
       }
 
       const sectionId = await findSectionId(grade, section);
+
       if (!sectionId) {
         setAvailableDates([]);
         return;
@@ -118,56 +137,55 @@ const TeacherAttendanceTable = ({
         .eq('section_id', sectionId);
 
       if (studentsError) {
-        console.error('Error fetching students:', studentsError);
+        throw studentsError;
+      }
+
+      if (!classStudents?.length) {
         setAvailableDates([]);
         return;
       }
 
-      if (!classStudents || classStudents.length === 0) {
-        setAvailableDates([]);
-        return;
-      }
-
-      const studentIds = classStudents.map(s => s.id);
-      
+      const studentIds = classStudents.map((student) => student.id);
       const { data: attendanceDates, error: datesError } = await supabase
         .from('attendance')
         .select('date')
         .in('student_id', studentIds)
         .order('date', { ascending: false });
 
-      if (datesError) throw datesError;
+      if (datesError) {
+        throw datesError;
+      }
 
-      const uniqueDates = [...new Set(attendanceDates?.map(item => item.date) || [])];
+      const uniqueDates = [...new Set((attendanceDates || []).map((item) => item.date))];
       setAvailableDates(uniqueDates);
-
-    } catch (err) {
-      console.error('Error fetching dates:', err);
+    } catch (fetchError) {
+      console.error('Error fetching dates:', fetchError);
       setAvailableDates([]);
     } finally {
       setDatesLoading(false);
     }
-  }, [className, parseClassName, findSectionId]);
+  }, [className, findSectionId, parseClassName]);
 
   const fetchClassAttendance = useCallback(async () => {
     if (!className) {
-      setError('No class name provided');
+      setError('No class selected.');
+      setAttendances([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    setError(null);
-    
+    setError('');
+
     try {
-      const todayDate = getCurrentDatabaseDate();
       const { grade, section } = parseClassName(className);
-      
+
       if (!grade || !section) {
         throw new Error(`Invalid class name format: ${className}`);
       }
-      
+
       const sectionId = await findSectionId(grade, section);
+
       if (!sectionId) {
         throw new Error(`Section "${section}" in Grade ${grade} not found`);
       }
@@ -187,35 +205,40 @@ const TeacherAttendanceTable = ({
         .order('last_name')
         .order('first_name');
 
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        throw studentsError;
+      }
 
-      if (!classStudents || classStudents.length === 0) {
+      if (!classStudents?.length) {
         setAttendances([]);
+        setDisplayDate(getPhilippinesDisplayDate(activeDate));
         setLoading(false);
         return;
       }
 
-      const studentIds = classStudents.map(s => s.id);
-      
+      const studentIds = classStudents.map((student) => student.id);
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
-        .eq('date', todayDate)
+        .eq('date', activeDate)
         .in('student_id', studentIds);
 
-      if (attendanceError) throw attendanceError;
+      if (attendanceError) {
+        throw attendanceError;
+      }
 
       const attendanceMap = new Map();
-      attendanceRecords?.forEach(record => {
+      (attendanceRecords || []).forEach((record) => {
         attendanceMap.set(record.student_id, record);
       });
 
-      const transformedData = classStudents.map(student => {
+      const transformedData = classStudents.map((student) => {
         const attendance = attendanceMap.get(student.id);
-        
+
         if (attendance) {
           return {
             id: attendance.id,
+            student_id: student.id,
             lrn: student.lrn,
             first_name: student.first_name,
             last_name: student.last_name,
@@ -223,335 +246,298 @@ const TeacherAttendanceTable = ({
             time_in: attendance.time_in,
             time_out: attendance.time_out,
             date: attendance.date,
-            status: attendance.status || 'present',
-            student_lrn: student.lrn,
-            student_id: student.id
-          };
-        } else {
-          return {
-            id: `${student.id}-${todayDate}`,
-            lrn: student.lrn,
-            first_name: student.first_name,
-            last_name: student.last_name,
-            middle_name: student.middle_name,
-            time_in: null,
-            time_out: null,
-            date: todayDate,
-            status: 'absent',
-            student_lrn: student.lrn,
-            student_id: student.id
+            status: attendance.status || 'present'
           };
         }
+
+        return {
+          id: `${student.id}-${activeDate}`,
+          student_id: student.id,
+          lrn: student.lrn,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          middle_name: student.middle_name,
+          time_in: null,
+          time_out: null,
+          date: activeDate,
+          status: 'absent'
+        };
       });
 
       setAttendances(transformedData);
-      setDisplayDate(getPhilippinesDisplayDate());
-      
-    } catch (err) {
-      console.error('Error fetching attendance:', err);
-      setError(err.message);
+      setDisplayDate(getPhilippinesDisplayDate(activeDate));
+    } catch (fetchError) {
+      console.error('Error fetching attendance:', fetchError);
       setAttendances([]);
+      setError(fetchError.message || 'Failed to load attendance records.');
     } finally {
       setLoading(false);
     }
-  }, [className, getCurrentDatabaseDate, getPhilippinesDisplayDate, parseClassName, findSectionId, getCurrentPhilippinesDate]);
+  }, [activeDate, className, findSectionId, getPhilippinesDisplayDate, parseClassName]);
 
   const formatTimeDisplay = useCallback((timeString) => {
-    if (!timeString) return 'N/A';
-    
+    if (!timeString) {
+      return formatNA(timeString);
+    }
+
     try {
       const [hours, minutes] = timeString.split(':').map(Number);
-      
       const period = hours >= 12 ? 'PM' : 'AM';
       const displayHours = hours % 12 || 12;
-      
+
       return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`;
-    } catch (error) {
-      console.error('Error formatting time:', error, timeString);
+    } catch (formatError) {
+      console.error('Error formatting time:', formatError, timeString);
       return timeString;
     }
   }, []);
 
-  const formatStatusWithStyle = useCallback((status) => {
-    let className = styles.status;
-    let displayText = 'Absent';
-    
-    switch(status?.toLowerCase()) {
+  const getStatusMeta = useCallback((status) => {
+    switch (status?.toLowerCase()) {
       case 'present':
-        className += ` ${styles.statusPresent}`;
-        displayText = 'Present';
-        break;
+        return { className: styles.statusPresent, text: 'Present' };
       case 'late':
-        className += ` ${styles.statusLate}`;
-        displayText = 'Late';
-        break;
+        return { className: styles.statusLate, text: 'Late' };
       case 'absent':
-        className += ` ${styles.statusAbsent}`;
-        displayText = 'Absent';
-        break;
       default:
-        className += ` ${styles.statusAbsent}`;
+        return { className: styles.statusAbsent, text: 'Absent' };
     }
-    
-    return { className, text: displayText };
-  }, []);
-
-  const handleDateSelect = useCallback((date) => {
-    setSelectedDate(date);
   }, []);
 
   const isToday = useCallback((dateString) => {
-    if (!dateString) return false;
-    const todayPhilippines = getCurrentPhilippinesDate();
-    return dateString === todayPhilippines;
-  }, [getCurrentPhilippinesDate]);
+    if (!dateString) {
+      return false;
+    }
+
+    return dateString === getPHDateIso();
+  }, []);
+
+  const dateOptions = useMemo(() => {
+    const options = [activeDate, ...availableDates];
+    return [...new Set(options)].sort((left, right) => right.localeCompare(left));
+  }, [activeDate, availableDates]);
 
   const filteredAttendances = useMemo(() => {
     let filtered = attendances;
-    
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(attendance => {
+
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter((attendance) => {
         const fullName = `${attendance.first_name || ''} ${attendance.last_name || ''} ${attendance.middle_name || ''}`.toLowerCase();
         const lrn = attendance.lrn?.toLowerCase() || '';
         return fullName.includes(searchLower) || lrn.includes(searchLower);
       });
     }
-    
+
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(attendance => 
-        attendance.status?.toLowerCase() === statusFilter.toLowerCase()
+      filtered = filtered.filter(
+        (attendance) => attendance.status?.toLowerCase() === statusFilter.toLowerCase()
       );
     }
-    
+
     return sortEntities(filtered, { type: 'student' });
   }, [attendances, searchTerm, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filteredAttendances.length;
-    const present = filteredAttendances.filter(a => a.status === 'present').length;
-    const late = filteredAttendances.filter(a => a.status === 'late').length;
-    const absent = filteredAttendances.filter(a => a.status === 'absent').length;
-    
+    const present = filteredAttendances.filter((item) => item.status === 'present').length;
+    const late = filteredAttendances.filter((item) => item.status === 'late').length;
+    const absent = filteredAttendances.filter((item) => item.status === 'absent').length;
+
     return { total, present, late, absent };
   }, [filteredAttendances]);
 
-  useEffect(() => {
-    if (className) {
-      fetchClassAttendance();
-      fetchAvailableDates();
-      
-      const channel = supabase
-        .channel(`attendance-${className}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'attendance'
-          },
-          () => {
-            fetchClassAttendance();
-            fetchAvailableDates();
-          }
-        )
-        .subscribe();
+  const withColumnWidth = useCallback((width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  }), []);
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [className, fetchClassAttendance, fetchAvailableDates]);
-
-  useEffect(() => {
-    if (className && selectedDate !== undefined) {
-      fetchClassAttendance();
-    }
-  }, [selectedDate, className, fetchClassAttendance]);
-
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
-          <p>Loading attendance for {className}...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.error}>
-          <h3>Error Loading Attendance</h3>
-          <p>{error}</p>
-          <button 
-            className={styles.retryButton}
-            onClick={fetchClassAttendance}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.headerGrid}>
-        <div className={styles.headerColumn}>
-          <h2 className={styles.className}>{className}</h2>
-        </div>
-        <div className={styles.headerColumn}>
-          {subject && <p className={styles.subject}>{subject}</p>}
-        </div>
-        <div className={styles.headerColumn}>
-          <p className={styles.date}>Date: {displayDate}</p>
-        </div>
-      </div>
-
-      <div className={styles.filterRow}>
-        <div className={styles.searchContainer}>
-          <Input
-            placeholder="Search students by name or LRN..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            search={true}
+  const tableColumns = useMemo(() => [
+    {
+      key: 'lrn',
+      label: 'LRN',
+      headerStyle: withColumnWidth('18%', 120),
+      cellStyle: withColumnWidth('18%', 120),
+      renderCell: ({ row }) => formatNA(row.lrn)
+    },
+    {
+      key: 'student_name',
+      label: 'STUDENT NAME',
+      headerStyle: withColumnWidth('34%', 220),
+      cellStyle: withColumnWidth('34%', 220),
+      headerClassName: styles.nameHeader,
+      cellClassName: styles.nameCell,
+      renderCell: ({ row }) => formatStudentName(row)
+    },
+    {
+      key: 'time_in',
+      label: 'TIME IN',
+      headerStyle: withColumnWidth('16%', 140),
+      cellStyle: withColumnWidth('16%', 140),
+      renderCell: ({ row }) => formatTimeDisplay(row.time_in)
+    },
+    {
+      key: 'time_out',
+      label: 'TIME OUT',
+      headerStyle: withColumnWidth('16%', 140),
+      cellStyle: withColumnWidth('16%', 140),
+      renderCell: ({ row }) => formatTimeDisplay(row.time_out)
+    },
+    {
+      key: 'status',
+      label: 'STATUS',
+      headerStyle: withColumnWidth('16%', 150),
+      cellStyle: withColumnWidth('16%', 150),
+      renderHeader: () => (
+        <div className={styles.statusHeader}>
+          <span>Status</span>
+          <EntityDropdown
+            options={STATUS_OPTIONS}
+            selectedValue={statusFilter === 'all' ? '' : statusFilter}
+            onSelect={(value) => setStatusFilter(value || 'all')}
+            allLabel="All"
+            buttonTitle="Filter status"
+            getOptionLabel={(option) => option.label}
+            getOptionValue={(option) => option.value}
           />
         </div>
-        
-        <div className={styles.filterContainer}>
-          <div className={styles.statusFilter}>
-            <label htmlFor="statusFilter" className={styles.filterLabel}>
-              Filter by Status:
-            </label>
-            <select
-              id="statusFilter"
-              className={styles.statusSelect}
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="present">Present</option>
-              <option value="late">Late</option>
-              <option value="absent">Absent</option>
-            </select>
+      ),
+      renderCell: ({ row }) => {
+        const statusMeta = getStatusMeta(row.status);
+
+        return (
+          <span className={`${styles.statusPill} ${statusMeta.className}`}>
+            {statusMeta.text}
+          </span>
+        );
+      }
+    }
+  ], [formatTimeDisplay, getStatusMeta, statusFilter, withColumnWidth]);
+
+  const getRowClassName = useCallback(({ rowIndex }) => {
+    return rowIndex % 2 === 0 ? styles.attendanceRowEven : styles.attendanceRowOdd;
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableDates();
+  }, [fetchAvailableDates]);
+
+  useEffect(() => {
+    fetchClassAttendance();
+  }, [fetchClassAttendance]);
+
+  useEffect(() => {
+    if (!className) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`attendance-${className}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance'
+        },
+        () => {
+          fetchClassAttendance();
+          fetchAvailableDates();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [className, fetchAvailableDates, fetchClassAttendance]);
+
+  return (
+    <div className={styles.attendanceTableContainer}>
+      <section className={styles.summaryCard}>
+        <div className={styles.summaryHeader}>
+          <div>
+            <p className={styles.eyebrow}>Daily attendance snapshot</p>
+            <h2 className={styles.className}>{className}</h2>
+          </div>
+          <div className={styles.metaCluster}>
+            {subject && <span className={styles.metaChip}>{subject}</span>}
+            {schoolYear && <span className={styles.metaChip}>{schoolYear}</span>}
+            <span className={styles.metaChipStrong}>{displayDate || getPhilippinesDisplayDate(activeDate)}</span>
           </div>
         </div>
 
-        <div className={styles.dateSelectorContainer}>
-          <div className={styles.dateSelector}>
-            <FontAwesomeIcon icon={faCalendarDays} className={styles.dateIcon} />
-            <span className={styles.dateLabel}>Viewing:</span>
-            <div className={`${styles.currentDateIndicator} ${!selectedDate || isToday(selectedDate) ? styles.currentDateIndicatorActive : ''}`}>
-              {!selectedDate || isToday(selectedDate) ? 'Today' : 'Past Date'}
-            </div>
-            <select
-              className={styles.dateSelect}
-              value={selectedDate || getCurrentPhilippinesDate()}
-              onChange={(e) => {
-                handleDateSelect(e.target.value);
-              }}
-              disabled={datesLoading}
-            >
-              {availableDates.map(date => {
-                const dateObj = new Date(date + 'T00:00:00Z');
-                const phDate = new Date(dateObj.getTime() + (8 * 60 * 60 * 1000));
-                const formattedDate = phDate.toLocaleDateString('en-PH', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                });
-                
-                const isDateToday = isToday(date);
-                
-                return (
+        <div className={styles.controlsRow}>
+          <div className={styles.searchContainer}>
+            <Input
+              placeholder="Search students by name or LRN"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              search={true}
+            />
+          </div>
+
+          <div className={styles.dateControls}>
+            <div className={styles.dateSelector}>
+              <span className={styles.dateIconWrap}>
+                <FontAwesomeIcon icon={faCalendarDays} className={styles.dateIcon} />
+              </span>
+              <div className={styles.dateCopy}>
+                <span className={styles.dateLabel}>Viewing date</span>
+                <span className={`${styles.dateBadge} ${isToday(activeDate) ? styles.dateBadgeActive : ''}`}>
+                  {isToday(activeDate) ? 'Today' : 'Past record'}
+                </span>
+              </div>
+              <select
+                className={styles.dateSelect}
+                value={activeDate}
+                onChange={(event) => setSelectedDate(event.target.value === getPHDateIso() ? '' : event.target.value)}
+                disabled={datesLoading}
+              >
+                {dateOptions.map((date) => (
                   <option key={date} value={date}>
-                    {formattedDate} {isDateToday ? '(Today)' : ''}
+                    {formatDateOption(date)}{isToday(date) ? ' (Today)' : ''}
                   </option>
-                );
-              })}
-            </select>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Statistics Summary */}
-      <div className={styles.statsContainer}>
-        <div className={styles.statItem}>
-          <span className={styles.statLabel}>Total Students:</span>
-          <span className={styles.statValue}>{stats.total}</span>
+        <div className={styles.statsGrid}>
+          <article className={styles.statCard}>
+            <span className={styles.statLabel}>Total students</span>
+            <strong className={styles.statValue}>{stats.total}</strong>
+          </article>
+          <article className={styles.statCard}>
+            <span className={styles.statLabel}>Present</span>
+            <strong className={`${styles.statValue} ${styles.statPresent}`}>{stats.present}</strong>
+          </article>
+          <article className={styles.statCard}>
+            <span className={styles.statLabel}>Late</span>
+            <strong className={`${styles.statValue} ${styles.statLate}`}>{stats.late}</strong>
+          </article>
+          <article className={styles.statCard}>
+            <span className={styles.statLabel}>Absent</span>
+            <strong className={`${styles.statValue} ${styles.statAbsent}`}>{stats.absent}</strong>
+          </article>
         </div>
-        <div className={styles.statItem}>
-          <span className={styles.statLabel}>Present:</span>
-          <span className={`${styles.statValue} ${styles.present}`}>
-            {stats.present}
-          </span>
-        </div>
-        <div className={styles.statItem}>
-          <span className={styles.statLabel}>Late:</span>
-          <span className={`${styles.statValue} ${styles.late}`}>
-            {stats.late}
-          </span>
-        </div>
-        <div className={styles.statItem}>
-          <span className={styles.statLabel}>Absent:</span>
-          <span className={`${styles.statValue} ${styles.absent}`}>
-            {stats.absent}
-          </span>
-        </div>
-      </div>
+      </section>
 
-      <div className={styles.tableContainer}>
-        <div className={styles.tableWrapper}>
-          <table className={styles.attendanceTable}>
-            <thead>
-              <tr>
-                <th className={`${styles.lrnColumn} ${styles.tableHeader}`}>LRN</th>
-                <th className={`${styles.nameColumn} ${styles.tableHeader}`}>STUDENT NAME</th>
-                <th className={`${styles.timeColumn} ${styles.tableHeader}`}>TIME IN</th>
-                <th className={`${styles.timeColumn} ${styles.tableHeader}`}>TIME OUT</th>
-                <th className={`${styles.statusColumn} ${styles.tableHeader}`}>STATUS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAttendances.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className={styles.noData}>
-                    {attendances.length === 0 
-                      ? `No students found in class ${className}`
-                      : 'No students match your search criteria'}
-                  </td>
-                </tr>
-              ) : (
-                filteredAttendances.map((attendance, index) => {
-                  const statusInfo = formatStatusWithStyle(attendance.status);
-                  
-                  return (
-                    <tr 
-                      key={attendance.id} 
-                      className={index % 2 === 0 ? styles.rowEven : styles.rowOdd}
-                    >
-                      <td className={`${styles.lrnCell} ${styles.tableCell}`}>{formatNA(attendance.lrn)}</td>
-                      <td className={`${styles.nameCell} ${styles.tableCell}`}>{formatStudentName(attendance)}</td>
-                      <td className={`${styles.timeCell} ${styles.tableCell}`}>{formatTimeDisplay(attendance.time_in)}</td>
-                      <td className={`${styles.timeCell} ${styles.tableCell}`}>{formatTimeDisplay(attendance.time_out)}</td>
-                      <td className={`${styles.statusCell} ${styles.tableCell}`}>
-                        <span className={statusInfo.className}>
-                          {statusInfo.text}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Table
+        columns={tableColumns}
+        rows={filteredAttendances}
+        getRowId={(row) => row.id}
+        loading={loading}
+        error={error}
+        emptyMessage="No attendance records match the current filters."
+        tableLabel={`Attendance for ${className}`}
+        rowClassName={getRowClassName}
+        className={styles.tableSurface}
+        wrapperClassName={styles.tableWrapper}
+      />
     </div>
   );
-};
+}
 
 export default TeacherAttendanceTable;

@@ -13,6 +13,9 @@ import { faUsers, faTrash, faQrcode } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx';
 import { StudentService } from '../../../Utils/EntityService.js';
 import { supabase } from '../../../lib/supabase';
+import { exportEntity } from '../../../Utils/exportEntity.js';
+import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
 
 function AdminStudents() {
   const { success, error: toastError } = useToast();
@@ -189,6 +192,19 @@ function AdminStudents() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleExportStudents = () => {
+    try {
+      exportEntity({
+        entity: 'student',
+        data: allStudents,
+        filename: 'student-export',
+      });
+      success('Successfully downloaded student data table');
+    } catch (err) {
+      toastError(`Failed to export student data: ${err.message}`);
+    }
+  };
+
   const deleteSingleStudentAPI = async (studentId) => {
     try {
       console.log('🔄 Deleting student ID:', studentId);
@@ -253,23 +269,34 @@ function AdminStudents() {
       <SectionLabel label="Student Records"></SectionLabel>
       
       <div className={styles.top}>
-        <div className={styles.searchAndFilter}>
-          <Input 
-            placeholder="Search Student Records" 
-            value={searchTerm}
-            onChange={handleSearchChange}
-            search="true"
+        <div className={styles.topLeft}>
+          <Button 
+            color="coolGray" 
+            height="sm" 
+            icon={<DownloadIcon/>}
+            width="auto" 
+            label="Export" 
+            onClick={handleExportStudents}
+            disabled={loadingData || allStudents.length === 0}
+          />
+          <Button 
+            color="coolGray" 
+            height="sm" 
+            width="auto" 
+            icon={<UploadIcon/>}
+            label="Import" 
+            onClick={() => setIsUploadModalOpen(true)}
+            disabled={loadingData}
           />
           
           {selectedStudents.length > 0 && (
             <div className={styles.bulkActions}>
               <Button
-                color="primary"
+                color="warmStone"
                 height="sm"
                 width="auto"
                 icon={<FontAwesomeIcon icon={faQrcode} />}
                 onClick={handleBulkQRClick}
-                style={{ marginRight: '10px' }}
                 disabled={loadingData}
               />
               <Button
@@ -284,12 +311,19 @@ function AdminStudents() {
           )}
         </div>
         
-        <div className={styles.addButtons}>
+        <div className={styles.topRight}>
+          <Input 
+            placeholder="Search Student Records" 
+            value={searchTerm}
+            onChange={handleSearchChange}
+            search="true"
+          />  
+
           <Button 
-            color="success" 
+            color="ocean" 
             height="sm" 
             width="md" 
-            label="Add Students" 
+            label="+ New Students" 
             onClick={() => setIsUploadModalOpen(true)}
             style={{ marginRight: '10px' }}
             disabled={loadingData}

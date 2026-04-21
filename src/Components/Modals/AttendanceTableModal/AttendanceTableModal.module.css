@@ -1,8 +1,14 @@
-
-
-.modalContent {
+.modalShell {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   overflow: hidden;
-  padding: 0; 
+}
+
+.tableRegion {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }

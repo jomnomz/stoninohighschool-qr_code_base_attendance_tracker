@@ -2,73 +2,19 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  --table-content-width: 98%;
 }
 
 .tableWrapper {
-  max-height: 59vh;
+  max-height: 66vh;
   overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
   width: 98%;
 }
 
-.tableWrapper table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  table-layout: auto;
-}
-
-.tableWrapper thead th {
-  position: sticky;
-  top: 0;
-  background-color: #f2f2f2;
-  z-index: 10;
-  box-shadow: 0 1px 0 #e0e0e0;
-}
-
-th {
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.studentRow td {
-  padding: 12px;
-  text-align: center;
-  vertical-align: middle;
-}
-
-td, th {
-  text-align: center;
-  padding: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-tbody tr {
-  margin: 0;
-  padding: 0;
-  border-spacing: 0;
-}
-
-.rowEven {
-  background-color: white !important;
-}
-
-.rowOdd {
-  background-color: #f2f2f2 !important;
-}
-
-.studentRow:hover {
-  background-color: #8a8a8a !important;
+.studentRow {
   cursor: pointer;
 }
 
-.studentRow:hover td {
-  color: white;
-}
 
 .editingRow {
   cursor: default !important;
@@ -78,9 +24,6 @@ tbody tr {
   background-color: inherit !important;
 }
 
-.editingRow:hover td {
-  color: inherit !important;
-}
 
 .classContainers {
   display: flex;
@@ -89,11 +32,12 @@ tbody tr {
 }
 
 .attendanceCard {
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-color: #f7fafc;
+  border: 1px solid #dde5ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 35, 58, 0.08);
   text-align: left;
-  padding: 20px;
+  padding: 22px;
   cursor: default;
 }
 
@@ -138,28 +82,61 @@ tbody tr {
   border: none;
 }
 
+.expandRow:hover {
+  background-color: inherit;
+}
+
 .attendanceHeader {
   font-weight: bold;
   font-size: 30px;
   margin-bottom: 10px;
 }
 
-.attendanceInfo {
+.attendanceInfo,
+.studentInfo {
   font-size: 15px;
   margin: 4px 0;
 }
 
-.loading, .error, .noAttendance {
+.loading,
+.error,
+.noAttendance {
   text-align: center;
   padding: 20px;
   font-size: 16px;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 10px;
+  border: 3px solid #dce7f2;
+  border-top-color: #5e7b9c;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error {
   color: #d32f2f;
   background-color: #ffebee;
   border: 1px solid #f44336;
-  border-radius: 4px;
+  border-radius: 8px;
+}
+
+.retryButton {
+  margin-top: 10px;
+  border: 1px solid #d8e1ec;
+  background: #ffffff;
+  color: #23344f;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .noAttendance {
@@ -172,14 +149,19 @@ tbody tr {
 .tableInfo {
   display: flex;
   flex-direction: column;
-  justify-content: end;
+  justify-content: center;
 }
 
 .tableInfo p {
   margin: 0;
-  font-weight: bold;
-  color: #003a02;
-} 
+  font-weight: 700;
+  color: #2f5d4f;
+  font-size: 0.92rem;
+  background: #e8f4ef;
+  border: 1px solid #cae6dd;
+  border-radius: 999px;
+  padding: 6px 12px;
+}
 
 .statusLate {
   background-color: #ffc107;
@@ -192,7 +174,7 @@ tbody tr {
 
 .statusPresent {
   background-color: #28a745;
-  color: white;
+  color: #fff;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.85rem;
@@ -201,7 +183,7 @@ tbody tr {
 
 .statusAbsent {
   background-color: #dc3545;
-  color: white;
+  color: #fff;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.85rem;
@@ -216,10 +198,6 @@ tbody tr {
 
 .hiddenRow {
   display: none;
-}
-
-.expandRow:hover {
-  background-color: inherit;
 }
 
 .sectionHeader {
@@ -237,11 +215,23 @@ tbody tr {
 }
 
 .sectionHeader span {
-  font-weight: bold;
+  font-weight: bolder;
   white-space: nowrap;
 }
 
-/* Edit styles */
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.statusHeader span {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .icon {
   font-size: 30px;
   display: flex;
@@ -251,11 +241,11 @@ tbody tr {
 
 .icon svg {
   transition: color 0.2s;
-  color: #6C757D;
+  color: #6a7788;
 }
 
 .icon svg:hover {
-  color: white;
+  color: #0f6b58;
 }
 
 .editCell {
@@ -269,7 +259,8 @@ tbody tr {
   gap: 8px;
 }
 
-.saveBtn, .cancelBtn {
+.saveBtn,
+.cancelBtn {
   padding: 6px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -282,7 +273,7 @@ tbody tr {
 
 .saveBtn {
   background-color: #28a745;
-  color: white;
+  color: #fff;
   border-color: #28a745;
 }
 
@@ -293,7 +284,7 @@ tbody tr {
 
 .cancelBtn {
   background-color: #6c757d;
-  color: white;
+  color: #fff;
   border-color: #6c757d;
 }
 
@@ -302,7 +293,8 @@ tbody tr {
   border-color: #545b62;
 }
 
-.saveBtn:disabled, .cancelBtn:disabled {
+.saveBtn:disabled,
+.cancelBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -314,25 +306,24 @@ tbody tr {
   font-weight: 500;
 }
 
-/* Time picker styles */
 .timeInputContainer {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   width: 100%;
   justify-content: center;
 }
 
 .timeInput {
   flex: 1;
-  padding: 8px 12px;
+  padding: 2px 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 12px;
   font-family: monospace;
-  height: 35px;
-  min-width: 100px;
-  max-width: 120px;
+  height: 26px;
+  min-width: 88px;
+  max-width: 104px;
 }
 
 .timeInput:focus {
@@ -354,7 +345,7 @@ tbody tr {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 3px;
   border-radius: 4px;
   color: #dc3545;
   display: flex;
@@ -370,7 +361,7 @@ tbody tr {
 }
 
 .clearTimeButton svg {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .timeCell {
@@ -378,70 +369,16 @@ tbody tr {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 50px;
+  min-height: 0;
 }
 
 .timeDisplay {
-  padding: 8px 12px;
+  padding: 4px 8px;
   font-family: monospace;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   color: #333;
   min-width: 100px;
-}
-
-.tableWrapper table th:nth-child(1),
-.tableWrapper table td:nth-child(1) {
-  width: 14%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(2),
-.tableWrapper table td:nth-child(2) {
-  width: 14%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(3),
-.tableWrapper table td:nth-child(3) {
-  width: 8%;
-  min-width: 80px;
-}
-
-.tableWrapper table th:nth-child(4),
-.tableWrapper table td:nth-child(4) {
-  width: 12%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(5),
-.tableWrapper table td:nth-child(5) {
-  width: 14%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(6),
-.tableWrapper table td:nth-child(6) {
-  width: 14%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(7),
-.tableWrapper table td:nth-child(7) {
-  width: 12%;
-  min-width: 120px;
-}
-
-.tableWrapper table th:nth-child(8),
-.tableWrapper table td:nth-child(8) {
-  width: 10%;
-  min-width: 100px;
-}
-
-.tableWrapper table th:nth-child(9),
-.tableWrapper table td:nth-child(9) {
-  width: 8%;
-  min-width: 70px;
 }
 
 .action-button {
@@ -455,65 +392,14 @@ tbody tr {
 }
 
 @media (max-width: 768px) {
-  .tableWrapper table th:nth-child(1),
-  .tableWrapper table td:nth-child(1) {
-    width: 13%;
-    min-width: 100px;
-  }
-  
-  .tableWrapper table th:nth-child(2),
-  .tableWrapper table td:nth-child(2) {
-    width: 13%;
-    min-width: 100px;
-  }
-  
-  .tableWrapper table th:nth-child(3),
-  .tableWrapper table td:nth-child(3) {
-    width: 7%;
-    min-width: 60px;
-  }
-  
-  .tableWrapper table th:nth-child(4),
-  .tableWrapper table td:nth-child(4) {
-    width: 11%;
-    min-width: 100px;
-  }
-  
-  .tableWrapper table th:nth-child(5),
-  .tableWrapper table td:nth-child(5),
-  .tableWrapper table th:nth-child(6),
-  .tableWrapper table td:nth-child(6) {
-    width: 12%;
-    min-width: 100px;
-  }
-  
-  .tableWrapper table th:nth-child(7),
-  .tableWrapper table td:nth-child(7) {
-    width: 11%;
-    min-width: 100px;
-  }
-  
-  .tableWrapper table th:nth-child(8),
-  .tableWrapper table td:nth-child(8) {
-    width: 9%;
-    min-width: 90px;
-  }
-  
-  .tableWrapper table th:nth-child(9),
-  .tableWrapper table td:nth-child(9) {
-    width: 7%;
-    min-width: 60px;
-  }
-  
   .timeInput {
     min-width: 80px;
     font-size: 12px;
     padding: 6px 8px;
   }
-  
+
   .timeDisplay {
     font-size: 12px;
     min-width: 80px;
   }
 }
-

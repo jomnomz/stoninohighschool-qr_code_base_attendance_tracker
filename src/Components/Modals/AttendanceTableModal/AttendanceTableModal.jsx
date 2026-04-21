@@ -15,17 +15,15 @@ const AttendanceTableModal = ({
       isOpen={isOpen} 
       onClose={onClose}
       size="xxxl"
-      className={styles.modal}
     >
-      <div className={styles.modalContent}>
-        <TeacherAttendanceTable
-          className={className}
-          subject={subject}
-          schoolYear={schoolYear}
-          onEditClick={(studentId, attendanceData) => {
-            console.log('Edit clicked:', studentId, attendanceData);
-          }}
-        />
+      <div className={styles.modalShell}>
+        <div className={styles.tableRegion}>
+          <TeacherAttendanceTable
+            className={className}
+            subject={subject}
+            schoolYear={schoolYear}
+          />
+        </div>
       </div>
     </Modal>
   );

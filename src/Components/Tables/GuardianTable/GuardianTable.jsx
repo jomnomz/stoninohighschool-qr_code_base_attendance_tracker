@@ -370,46 +370,53 @@ const GuardianTable = ({
   };
 
   const getVisibleRowClassName = useMemo(() => {
-    return ({ row, rowIndex }) => {
-      const visibleRowIndex = sortedGuardians
-        .slice(0, rowIndex)
-        .filter(guardian => !isRowExpanded(guardian.id))
-        .length;
-
-      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-
+    return ({ row }) => {
       return [
         styles.guardianRow,
-        rowColorClass,
         editingId === row.id ? styles.editingRow : ''
       ].filter(Boolean).join(' ');
     };
-  }, [sortedGuardians, isRowExpanded, editingId]);
+  }, [editingId]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
 
   const tableColumns = useMemo(() => [
     {
       key: 'first_name',
       label: 'FIRST NAME',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
       renderCell: ({ row }) => renderEditField(row, 'first_name')
     },
     {
       key: 'last_name',
       label: 'LAST NAME',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
       renderCell: ({ row }) => renderEditField(row, 'last_name')
     },
     {
       key: 'guardian_of',
       label: 'GUARDIAN OF',
+      headerStyle: withColumnWidth('25%', 150),
+      cellStyle: withColumnWidth('25%', 150),
       renderCell: ({ row }) => row.guardian_of
     },
     {
       key: 'grade',
       label: 'GRADE',
+      headerStyle: withColumnWidth('10%', 80),
+      cellStyle: withColumnWidth('10%', 80),
       renderCell: ({ row }) => row.grade
     },
     {
       key: 'section',
       label: 'SECTION',
+      headerStyle: withColumnWidth('15%', 100),
+      cellStyle: withColumnWidth('15%', 100),
       renderHeader: () => (
         <div className={styles.sectionHeader}>
           <div className={styles.sectionHeaderRow}>
@@ -427,11 +434,15 @@ const GuardianTable = ({
     {
       key: 'phone_number',
       label: 'PHONE NO.',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
       renderCell: ({ row }) => renderEditField(row, 'phone_number')
     },
     {
       key: 'edit',
       label: 'EDIT',
+      headerStyle: withColumnWidth('10%', 80),
+      cellStyle: withColumnWidth('10%', 80),
       renderCell: ({ row }) => renderEditCell(row)
     }
   ], [sectionsToShowInDropdown, selectedSection, renderEditCell, renderEditField]);
@@ -459,12 +470,9 @@ const GuardianTable = ({
       rowClassName={getVisibleRowClassName}
       expandedRowId={expandedRow}
       renderExpandedRow={({ row }) => renderExpandedContent(row)}
-      expandedRowColSpan={7}
       persistExpandedRows={true}
       hideMainRowWhenExpanded={true}
       getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
-      striped={false}
-      noDataColSpan={7}
       className={styles.guardianTableContainer}
       wrapperClassName={styles.tableWrapper}
     />

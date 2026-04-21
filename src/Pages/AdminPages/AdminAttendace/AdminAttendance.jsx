@@ -6,7 +6,6 @@ import AttendanceTable from '../../../Components/Tables/AttendanceTable/Attendan
 import Input from '../../../Components/UI/Input/Input.jsx';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import DateSelector from '../../../Components/UI/Buttons/DateSelector/DateSelector.jsx';
-import StatusFilter from '../../../Components/UI/Buttons/StatusFilter/StatusFilter.jsx';
 import { supabase } from '../../../lib/supabase';
 
 function AdminAttendance() {
@@ -18,7 +17,6 @@ function AdminAttendance() {
   
   // New state for date and status filtering
   const [selectedDate, setSelectedDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [availableDates, setAvailableDates] = useState([]);
   const [datesLoading, setDatesLoading] = useState(false);
 
@@ -64,11 +62,6 @@ function AdminAttendance() {
     setSelectedDate(date);
   }, []);
 
-  // Handle status filter change
-  const handleStatusFilterChange = useCallback((status) => {
-    setStatusFilter(status);
-  }, []);
-
   // Fetch dates on component mount
   useEffect(() => {
     fetchAvailableDates();
@@ -96,10 +89,6 @@ function AdminAttendance() {
 
   return (
     <main className={styles.main}>
-      <PageLabel 
-        icon={<AssignmentTurnedInIcon sx={{ fontSize: 50, mb: -0.7 }}  />}  
-        label="Attendance"
-      />
       <SectionLabel label="Attendance Records" />
       
       <div className={styles.top}>
@@ -122,14 +111,6 @@ function AdminAttendance() {
               loading={datesLoading}
               showTodayIndicator={true}
             />
-            
-            <StatusFilter
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              showAllOption={true}
-              label="Status:"
-              showCounts={false}
-            />
           </div>
         </div>
       </div>
@@ -143,9 +124,7 @@ function AdminAttendance() {
         onSectionSelect={handleSectionSelect}
         availableSections={availableSections}
         loading={loading}
-        // Pass additional props for date and status filtering
         selectedDate={selectedDate}
-        statusFilter={statusFilter}
       />
     </main>
   );

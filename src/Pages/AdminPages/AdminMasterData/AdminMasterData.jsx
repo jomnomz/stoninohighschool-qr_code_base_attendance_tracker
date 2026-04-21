@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import styles from './AdminMasterData.module.css';
-import PageLabel from "../../../Components/UI/Labels/PageLabel/PageLabel.jsx";
+import SectionLabel from "../../../Components/UI/Labels/SectionLabel/SectionLabel.jsx";
 import FileUploadModal from '../../../Components/Modals/FileUploadModal/FileUploadModal.jsx';
 import Button from '../../../Components/UI/Buttons/Button/Button.jsx';
 import Input from '../../../Components/UI/Input/Input.jsx';
@@ -13,6 +13,9 @@ import SubjectTable from '../../../Components/Tables/SubjectTable/SubjectTable.j
 import GradeSchedulesTable from '../../../Components/Tables/GradeSchedulesTable/GradeSchedulesTable.jsx';
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx';
 import { EntityService } from '../../../Utils/EntityService.js';
+import { exportEntity } from '../../../Utils/exportEntity.js';
+import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
 
 function AdminMasterData() {
   const { success, error: toastError } = useToast();
@@ -20,6 +23,11 @@ function AdminMasterData() {
   const [refreshKey, setRefreshKey] = useState(0);
   
   const [activeTab, setActiveTab] = useState('gradeSections');
+  const [tableInfoByTab, setTableInfoByTab] = useState({
+    gradeSections: '',
+    subjects: '',
+    schedules: ''
+  });
   
   const [gradeSectionSearch, setGradeSectionSearch] = useState('');
   const [subjectSearch, setSubjectSearch] = useState('');
@@ -28,6 +36,9 @@ function AdminMasterData() {
   const [selectedGradeSections, setSelectedGradeSections] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [selectedSchedules, setSelectedSchedules] = useState([]);
+  const [gradeSectionData, setGradeSectionData] = useState([]);
+  const [subjectData, setSubjectData] = useState([]);
+  const [scheduleData, setScheduleData] = useState([]);
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteModalMode, setDeleteModalMode] = useState('single');
@@ -78,16 +89,57 @@ function AdminMasterData() {
   };
 
   const handleBulkDeleteClick = () => {
-    setDeleteEntityType(activeTab);
+    setDeleteEntityType(normalizeDeleteEntityType(activeTab));
     setDeleteModalMode('bulk');
     setIsDeleteModalOpen(true);
   };
 
   const handleSingleDeleteClick = (entity, entityType) => {
-    setDeleteEntityType(entityType);
+    setDeleteEntityType(normalizeDeleteEntityType(entityType));
     setDeleteModalMode('single');
     setEntityToDelete(entity);
     setIsDeleteModalOpen(true);
+  };
+
+  const normalizeDeleteEntityType = (type) => {
+    if (type === 'gradeSections' || type === 'gradeSection' || type === 'grade section') {
+      return 'gradeSections';
+    }
+    if (type === 'subjects' || type === 'subject') {
+      return 'subjects';
+    }
+    if (type === 'schedules' || type === 'schedule' || type === 'grade schedule' || type === 'gradeSchedule') {
+      return 'schedules';
+    }
+    return type;
+  };
+
+  const getModalEntityType = () => {
+    if (deleteEntityType === 'gradeSections') return 'grade section';
+    if (deleteEntityType === 'subjects') return 'subject';
+    if (deleteEntityType === 'schedules') return 'grade schedule';
+    return 'entity';
+  };
+
+  const getModalEntityData = () => {
+    if (deleteEntityType === 'gradeSections') return gradeSectionData;
+    if (deleteEntityType === 'subjects') return subjectData;
+    if (deleteEntityType === 'schedules') return scheduleData;
+    return [];
+  };
+
+  const getSelectedEntitiesForModal = () => {
+    const data = getModalEntityData();
+
+    const selectedIds = deleteEntityType === 'gradeSections'
+      ? selectedGradeSections
+      : deleteEntityType === 'subjects'
+      ? selectedSubjects
+      : selectedSchedules;
+
+    return selectedIds
+      .map((id) => data.find((item) => String(item.id) === String(id)))
+      .filter(Boolean);
   };
 
   const deleteSingleGradeSectionAPI = async (id) => {
@@ -233,47 +285,59 @@ function AdminMasterData() {
     }
   };
 
-  const getTableInfoMessage = () => {
-    let count = 0;
-    let type = '';
-    
-    switch (activeTab) {
-      case 'gradeSections':
-        count = selectedGradeSections.length;
-        type = 'grade section';
-        break;
-      case 'subjects':
-        count = selectedSubjects.length;
-        type = 'subject';
-        break;
-      case 'schedules':
-        count = selectedSchedules.length;
-        type = 'grade schedule';
-        break;
-      default:
-        return '';
-    }
-    
-    if (count > 0) {
-      return `${count} ${type}${count !== 1 ? 's' : ''} selected`;
-    }
-    return '';
+  const getAllMasterData = () => ({
+    gradeSections: gradeSectionData,
+    subjects: subjectData,
+    schedules: scheduleData,
+  });
+
+  const hasAnyMasterData = () => {
+    return gradeSectionData.length > 0 || subjectData.length > 0 || scheduleData.length > 0;
   };
+
+  const handleExportMasterData = () => {
+    try {
+      exportEntity({
+        entity: 'masterData',
+        data: getAllMasterData(),
+        filename: 'master-data-export',
+      });
+
+      success('Successfully downloaded full master data file (all sheets)');
+    } catch (err) {
+      toastError(`Failed to export master data: ${err.message}`);
+    }
+  };
+
+  const handleTableInfoChange = useCallback((tabKey, infoText) => {
+    setTableInfoByTab((previous) => ({
+      ...previous,
+      [tabKey]: infoText
+    }));
+  }, []);
 
   return (
     <main className={styles.main}>
-      <PageLabel 
-        icon={<TableChartIcon sx={{ fontSize: 50, mb: -0.7 }} />}  
-        label="Master Data"
-      />
+      <SectionLabel label="Master Data Records" />
       
       <div className={styles.top}>
-        <div className={styles.searchAndFilter}>
-          <Input 
-            placeholder={getSearchPlaceholder()} 
-            value={getCurrentSearch()}
-            onChange={handleSearchChange}
-            search="true"
+        <div className={styles.topLeft}>
+          <Button
+            height="sm" 
+            width="auto"
+            icon={<DownloadIcon/>}
+            label="Export"
+            color="coolGray"
+            onClick={handleExportMasterData}
+            disabled={!hasAnyMasterData()}
+          />
+          <Button
+            height="sm" 
+            width="auto"
+            icon={<UploadIcon/>}
+            label="Import"
+            color="coolGray"
+            onClick={handleOpenUploadModal}
           />
           
           {getSelectedCount() > 0 && (
@@ -290,12 +354,18 @@ function AdminMasterData() {
           )}
         </div>
         
-        <div className={styles.addButtons}>
+        <div className={styles.topRight}>
+          <Input 
+            placeholder={getSearchPlaceholder()} 
+            value={getCurrentSearch()}
+            onChange={handleSearchChange}
+            search="true"
+          />
           <Button
             height="sm" 
-            width="lg"
-            label="Add Master Data"
-            color="success"
+            width="md"
+            label="+ New Entity"
+            color="ocean"
             onClick={handleOpenUploadModal}
           />
         </div>
@@ -307,69 +377,74 @@ function AdminMasterData() {
           <div className={styles.tabs}>
             <Button
               label="Grade and Section"
-              tabBottom={true}
+              line={true}
               height="xs"
-              width="md"
-              color="grades"
+              width="auto"
               active={activeTab === 'gradeSections'}
               onClick={() => setActiveTab('gradeSections')}
             />
             <Button
               label="Subjects"
-              tabBottom={true}
+              line={true}
               height="xs"
-              width="md"
-              color="grades"
+              width="auto"
               active={activeTab === 'subjects'}
               onClick={() => setActiveTab('subjects')}
             />
             <Button
-              label="Grade Schedules"
-              tabBottom={true}
+              label="Grade and Schedules"
+              line={true}
               height="xs"
-              width="md"
-              color="grades"
+              width="auto"
               active={activeTab === 'schedules'}
               onClick={() => setActiveTab('schedules')}
             />
           </div>
           
           <div className={styles.tableInfo}>
-            <p>{getTableInfoMessage()}</p>
+            {tableInfoByTab[activeTab] && <p>{tableInfoByTab[activeTab]}</p>}
+            {getSelectedCount() > 0 && <p className={styles.selectedInfoText}>{getSelectedCount()} selected</p>}
           </div>
         </div>
         
         {/* CHANGED: Removed .tableWrapper and use .tabContent instead */}
         <div className={styles.tabContent}>
-          {activeTab === 'gradeSections' && (
+          {/* Render all tables always so data is fetched for export, hide via CSS */}
+          <div style={{ display: activeTab === 'gradeSections' ? 'block' : 'none' }}>
             <GradeSectionTable 
               key={`grade-section-${refreshKey}`}
               searchTerm={gradeSectionSearch}
               onSelectedGradeSectionsUpdate={handleGradeSectionsSelectedUpdate}
               selectedGradeSections={selectedGradeSections}
               onSingleDeleteClick={handleSingleDeleteClick}
+              onEntityDataUpdate={setGradeSectionData}
+              onInfoTextChange={(text) => handleTableInfoChange('gradeSections', text)}
             />
-          )}
-          
-          {activeTab === 'subjects' && (
+          </div>
+
+          <div style={{ display: activeTab === 'subjects' ? 'block' : 'none' }}>
             <SubjectTable 
               key={`subject-${refreshKey}`}
               searchTerm={subjectSearch}
               onSelectedSubjectsUpdate={handleSubjectsSelectedUpdate}
               selectedSubjects={selectedSubjects}
               onSingleDeleteClick={handleSingleDeleteClick}
+              onEntityDataUpdate={setSubjectData}
+              onInfoTextChange={(text) => handleTableInfoChange('subjects', text)}
             />
-          )}
-          
-          {activeTab === 'schedules' && (
+          </div>
+
+          <div style={{ display: activeTab === 'schedules' ? 'block' : 'none' }}>
             <GradeSchedulesTable 
               key={`schedule-${refreshKey}`}
               searchTerm={scheduleSearch}
               onSelectedSchedulesUpdate={handleSchedulesSelectedUpdate}
               selectedSchedules={selectedSchedules}
               onSingleDeleteClick={handleSingleDeleteClick}
+              onEntityDataUpdate={setScheduleData}
+              onInfoTextChange={(text) => handleTableInfoChange('schedules', text)}
             />
-          )}
+          </div>
         </div>
       </div>
 
@@ -390,11 +465,9 @@ function AdminMasterData() {
           }
         }}
         entity={deleteModalMode === 'single' ? entityToDelete : null}
-        selectedEntities={deleteModalMode === 'bulk' ? 
-          (deleteEntityType === 'gradeSections' ? selectedGradeSections : 
-           deleteEntityType === 'subjects' ? selectedSubjects : 
-           selectedSchedules) : []}
-        entityType={deleteEntityType}
+        selectedEntities={deleteModalMode === 'bulk' ? getSelectedEntitiesForModal() : []}
+        entityType={getModalEntityType()}
+        entityData={getModalEntityData()}
         onConfirm={deleteModalMode === 'single' ? handleConfirmDelete : undefined}
         onConfirmBulk={deleteModalMode === 'bulk' ? handleConfirmDelete : undefined}
         currentFilter={getCurrentSearch()}

@@ -17,7 +17,7 @@
 .input {
   width: 250px;
   padding: 10px 15px;
-  border-radius: 20px;
+  border-radius: 5px;
   border: 1px solid #ccc;
   font-size: 14px;
   transition: border-color 0.3s ease;

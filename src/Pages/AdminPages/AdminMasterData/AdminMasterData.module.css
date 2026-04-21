@@ -4,6 +4,7 @@
   gap: 25px;
   width: 100%;
   overflow-x: hidden;
+  margin-top: 20px;
 }
 
 .top {
@@ -15,64 +16,79 @@
   width: 100%;
 }
 
-.searchAndFilter {
+.topLeft {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.topRight {
+  display: flex;
   gap: 15px;
-  flex: 1;
-  min-width: 300px;
-  width: 100%;
+  margin-right: 37px;
 }
 
 .bulkActions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 15px;
-}
-
-.addButtons {
-  display: flex;
-  gap: 10px;
-  margin-right: 15px; 
 }
 
 .tabContainer {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
-  height: calc(100vh - 200px); /* Add this to limit height */
+  
 }
 
 .tabsContainer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 5px;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 10px;
-  width: 100%;
+  margin-bottom: 10px;
+  width: 98%;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 14px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f2f6fb 100%);
+  border: 1px solid #dde5ef;
 }
 
 .tabs {
   display: flex;
   gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .tableInfo {
   display: flex;
-  flex-direction: column;
-  justify-content: end;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-left: 8px;
 }
 
 .tableInfo p {
   margin: 0;
-  font-weight: bold;
-  color: #003a02;
+  font-weight: 700;
+  color: #3f4f67;
+  font-size: 0.9rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e8f4ef;
+  border: 1px solid #cae6dd;
   white-space: nowrap;
+}
+
+.tableInfo .selectedInfoText {
+  color: #34506d;
+  background: #eaf3ff;
+  border: 1px solid #c8dbf7;
 }
 
 /* REMOVE or CHANGE this .tableWrapper class */
@@ -80,20 +96,17 @@
 /* let the tables handle their own scrolling */
 .tabContent {
   width: 100%;
-  height: 100%;
-  min-height: 400px; /* Ensure minimum height */
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .tabsContainer {
-    flex-direction: column;
     align-items: stretch;
+    padding: 10px;
   }
   
   .tabs {
-    flex-direction: column;
-    width: 100%;
+    width: auto;
   }
   
   .searchAndFilter {
@@ -113,6 +126,6 @@
   
   .tableInfo {
     align-self: flex-start;
-    margin-top: 10px;
+    margin-left: 0;
   }
 }

@@ -8,7 +8,9 @@
 .dropArea {
     border: 2px dashed #3F7857;
     border-radius: 8px;
-    padding: 30px;
+    
+    padding-top: 80px;
+    padding-bottom: 30px;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s;
@@ -17,7 +19,19 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 15px;
+    position: relative;
+    gap: 10px;
+}
+
+.dropAreaRow {
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
 }
 
 .dropArea:hover {
@@ -35,7 +49,7 @@
 }
 
 .icon {
-    color: green;
+    color: black;
 }
 
 .fileInput {
@@ -118,18 +132,24 @@
   border-radius: 4px;
 }
 
+.download{
+    color: #13457a;
+}
+
 .templateLink {
-    margin-top: 4px;
-    margin-bottom: 4px;
-    font-size: 0.9em;
+    position: static;
+    margin: 8px 0 0;
+    font-size: 15px;
+
 }
 
 .downloadLink {
-    color: #007bff;
+    color: #67adf8;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    text-decoration: italic;
 }
 
 .downloadLink:hover {

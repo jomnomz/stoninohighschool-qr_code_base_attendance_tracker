@@ -22,6 +22,7 @@ function DeleteEntityModal({
   currentGrade = ''
 }) {
   const { info, error: toastError } = useToast(); 
+  const labels = getEntityTypeLabels(entityType);
   
   const isBulkDelete = selectedEntities.length > 0;
   const deleteCount = isBulkDelete ? selectedEntities.length : 1;
@@ -35,15 +36,28 @@ function DeleteEntityModal({
     hasQRCode: false,
     hasContextInfo: false,
     
-    ...getEntityConfig(entityType),
+    ...getEntityConfig(labels.singularKey),
     ...entityConfig
   };
 
-  const selectedEntityObjects = isBulkDelete 
+  const selectedEntityObjects = isBulkDelete
     ? selectedEntities
-        .map(entityId => entityData.find(e => e.id === entityId))
-        .filter(entity => entity !== undefined)
+        .map((selectedItem) => {
+          if (selectedItem && typeof selectedItem === 'object') {
+            return selectedItem;
+          }
+
+          const selectedId = String(selectedItem);
+          return entityData.find((item) => String(item.id) === selectedId);
+        })
+        .filter(Boolean)
     : [entity];
+
+  const selectedEntityIds = isBulkDelete
+    ? selectedEntities.map((selectedItem) =>
+        selectedItem && typeof selectedItem === 'object' ? selectedItem.id : selectedItem
+      )
+    : [];
 
   const hasAccounts = config.hasAccountField && 
     selectedEntityObjects.some(entity => 
@@ -54,9 +68,9 @@ function DeleteEntityModal({
     let warning = config.warningMessage;
     
     if (hasAccounts && config.hasAccountField) {
-      warning = `This will permanently delete ${entityType} data and ${entityType}${deleteCount > 1 ? 's' : ''} who have accounts.`;
+      warning = `This will permanently delete ${labels.sentenceSingular} data and ${deleteCount > 1 ? labels.sentencePlural : labels.sentenceSingular} who have accounts.`;
     } else if (config.hasQRCode) {
-      warning = `This action cannot be undone. All ${entityType} data, including QR codes, will be permanently removed.`;
+      warning = `This action cannot be undone. All ${labels.sentenceSingular} data, including QR codes, will be permanently removed.`;
     }
     
     return warning;
@@ -70,28 +84,28 @@ function DeleteEntityModal({
     
     if (uniqueStatuses.length === 1) {
       const status = uniqueStatuses[0];
-      if (status === 'pending') return `${entityType}${deleteCount > 1 ? 's have' : ' has'} pending invitations.`;
-      if (status === 'active') return `${entityType}${deleteCount > 1 ? 's have' : ' has'} active accounts.`;
-      if (status === 'inactive') return `${entityType}${deleteCount > 1 ? 's have' : ' has'} inactive accounts.`;
-      return `${entityType}${deleteCount > 1 ? 's have' : ' has'} no accounts yet.`;
+      if (status === 'pending') return `${deleteCount > 1 ? labels.sentencePlural : labels.sentenceSingular} ${deleteCount > 1 ? 'have' : 'has'} pending invitations.`;
+      if (status === 'active') return `${deleteCount > 1 ? labels.sentencePlural : labels.sentenceSingular} ${deleteCount > 1 ? 'have' : 'has'} active accounts.`;
+      if (status === 'inactive') return `${deleteCount > 1 ? labels.sentencePlural : labels.sentenceSingular} ${deleteCount > 1 ? 'have' : 'has'} inactive accounts.`;
+      return `${deleteCount > 1 ? labels.sentencePlural : labels.sentenceSingular} ${deleteCount > 1 ? 'have' : 'has'} no accounts yet.`;
     } else {
-      return `Selected ${entityType}s have various account statuses.`;
+      return `Selected ${labels.sentencePlural} have various account statuses.`;
     }
   };
 
   const handleConfirm = async () => {
     try {
       if (isBulkDelete) {
-        await onConfirmBulk?.(selectedEntities);
-        info(`${deleteCount} ${entityType}${deleteCount !== 1 ? 's' : ''} successfully deleted`);
+        await onConfirmBulk?.(selectedEntityIds);
+        info(`${deleteCount} ${deleteCount !== 1 ? labels.sentencePlural : labels.sentenceSingular} successfully deleted`);
       } else {
         await onConfirm?.(entity.id);
-        info(`${deleteCount} ${entityType} successfully deleted`);
+        info(`${deleteCount} ${labels.sentenceSingular} successfully deleted`);
       }
       onClose();
     } catch (error) {
       console.error('Error in deletion:', error);
-      toastError(`Failed to delete ${entityType}: ${error.message}`);
+      toastError(`Failed to delete ${labels.sentenceSingular}: ${error.message}`);
       onClose();
     }
   };
@@ -113,15 +127,15 @@ function DeleteEntityModal({
       <div className={styles.modalContainer}>
         <TitleModalLabel>
           {isBulkDelete 
-            ? `Delete ${deleteCount} Selected ${capitalizeFirstLetter(entityType)}${deleteCount > 1 ? 's' : ''}` 
-            : `Delete ${capitalizeFirstLetter(entityType)}`}
+            ? `Delete ${deleteCount} Selected ${deleteCount > 1 ? labels.titlePlural : labels.titleSingular}` 
+            : `Delete ${labels.titleSingular}`}
         </TitleModalLabel>
         
         <MessageModalLabel>
           {isBulkDelete ? (
-            `Are you sure you want to delete ${deleteCount} ${entityType}${deleteCount !== 1 ? 's' : ''} ${getContextDescription()}?`
+            `Are you sure you want to delete ${deleteCount} ${deleteCount !== 1 ? labels.sentencePlural : labels.sentenceSingular} ${getContextDescription()}?`
           ) : (
-            `Are you sure you want to delete this ${entityType}?`
+            `Are you sure you want to delete this ${labels.sentenceSingular}?`
           )}
         </MessageModalLabel>
         
@@ -134,8 +148,8 @@ function DeleteEntityModal({
         <EntityList 
           entities={selectedEntityObjects}
           variant={isBulkDelete ? "multiple" : "single"}
-          title={`${capitalizeFirstLetter(entityType)}${deleteCount > 1 ? 's' : ''} to be deleted`}
-          entityType={entityType}
+          title={`${deleteCount > 1 ? labels.titlePlural : labels.titleSingular} to be deleted`}
+          entityType={labels.listEntityType}
         />
 
         <InfoBox type="warning">
@@ -164,6 +178,76 @@ function DeleteEntityModal({
   );
 }
 
+function getEntityTypeLabels(entityType = '') {
+  const raw = String(entityType).trim();
+  const normalized = raw.toLowerCase();
+
+  if (['student', 'students'].includes(normalized)) {
+    return {
+      singularKey: 'student',
+      titleSingular: 'Student',
+      titlePlural: 'Students',
+      sentenceSingular: 'student',
+      sentencePlural: 'students',
+      listEntityType: 'student'
+    };
+  }
+
+  if (['teacher', 'teachers'].includes(normalized)) {
+    return {
+      singularKey: 'teacher',
+      titleSingular: 'Teacher',
+      titlePlural: 'Teachers',
+      sentenceSingular: 'teacher',
+      sentencePlural: 'teachers',
+      listEntityType: 'teacher'
+    };
+  }
+
+  if (['subject', 'subjects'].includes(normalized)) {
+    return {
+      singularKey: 'subject',
+      titleSingular: 'Subject',
+      titlePlural: 'Subjects',
+      sentenceSingular: 'subject',
+      sentencePlural: 'subjects',
+      listEntityType: 'subject'
+    };
+  }
+
+  if (['gradesection', 'grade section', 'gradesections', 'grade sections'].includes(normalized)) {
+    return {
+      singularKey: 'grade section',
+      titleSingular: 'Grade Section',
+      titlePlural: 'Grade Sections',
+      sentenceSingular: 'grade section',
+      sentencePlural: 'grade sections',
+      listEntityType: 'grade section'
+    };
+  }
+
+  if (['gradeschedule', 'grade schedule', 'gradeschedules', 'grade schedules', 'schedule', 'schedules'].includes(normalized)) {
+    return {
+      singularKey: 'grade schedule',
+      titleSingular: 'Grade Schedule',
+      titlePlural: 'Grade Schedules',
+      sentenceSingular: 'grade schedule',
+      sentencePlural: 'grade schedules',
+      listEntityType: 'grade schedule'
+    };
+  }
+
+  const fallback = raw || 'entity';
+  return {
+    singularKey: fallback,
+    titleSingular: capitalizeFirstLetter(fallback),
+    titlePlural: `${capitalizeFirstLetter(fallback)}s`,
+    sentenceSingular: fallback,
+    sentencePlural: `${fallback}s`,
+    listEntityType: fallback
+  };
+}
+
 function getEntityConfig(entityType) {
   const configs = {
     student: {
@@ -189,7 +273,19 @@ function getEntityConfig(entityType) {
       hasAccountField: false,
       hasQRCode: false,
       hasContextInfo: false
-    }
+      },
+      'grade schedule': {
+        warningMessage: 'This will permanently delete the grade schedule from the system.',
+        hasAccountField: false,
+        hasQRCode: false,
+        hasContextInfo: false
+      },
+      'grade section': {
+        warningMessage: 'This will permanently delete the grade section from the system.',
+        hasAccountField: false,
+        hasQRCode: false,
+        hasContextInfo: false
+      }
   };
   
   return configs[entityType] || configs.entity;

@@ -105,10 +105,6 @@ function AdminMessages() {
 
   return (
     <main className={styles.main}>
-      <PageLabel 
-        icon={<MessageIcon sx={{ fontSize: 50, mb: -0.7 }} />}  
-        label="Notifications"
-      />
       <SectionLabel label="Notification Records" />
       
       <div className={styles.top}>

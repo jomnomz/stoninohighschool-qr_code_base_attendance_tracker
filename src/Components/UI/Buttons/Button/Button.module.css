@@ -2,6 +2,8 @@
   border-radius: 5px;
   font-weight: bold;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
@@ -35,5 +37,33 @@
 
 .lineActive {
   font-weight: 700;
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.reverse {
+  flex-direction: row-reverse;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.icon svg {
+  display: block;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
 

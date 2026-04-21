@@ -16,6 +16,8 @@
 .searchAndFilter {
   display: flex;
   align-items: center;
+  justify-content: end;
+  margin-right: 35px;
   gap: 15px;
   flex: 1;
   min-width: 300px;

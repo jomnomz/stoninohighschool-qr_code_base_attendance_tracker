@@ -686,7 +686,6 @@ const StudentTable = ({
 
   const getTableInfoMessage = () => {
     const studentCount = sortedStudents.length;
-    const selectedCount = visibleSelectedStudents.length;
     
     let message = '';
     
@@ -718,36 +717,29 @@ const StudentTable = ({
       }
     }
     
-    if (selectedCount > 0) {
-      message += ` (${selectedCount} selected)`;
-    }
-    
     return message;
   };
 
   const getVisibleRowClassName = useMemo(() => {
-    return ({ row, rowIndex }) => {
-      const visibleRowIndex = sortedStudents
-        .slice(0, rowIndex)
-        .filter(student => !isRowExpanded(student.id))
-        .length;
-
-      const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-      const isSelected = selectedStudents.includes(row.id);
-
+    return ({ row }) => {
       return [
         styles.studentRow,
-        rowColorClass,
-        editingStudent === row.id ? styles.editingRow : '',
-        isSelected ? styles.selectedRow : ''
+        editingStudent === row.id ? styles.editingRow : ''
       ].filter(Boolean).join(' ');
     };
-  }, [sortedStudents, isRowExpanded, selectedStudents, editingStudent]);
+  }, [editingStudent]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
 
   const tableColumns = useMemo(() => [
     {
       key: 'select',
       label: '',
+      headerStyle: withColumnWidth('5%', 40),
+      cellStyle: withColumnWidth('5%', 40),
       renderHeader: () => (
         <div className={styles.icon} onClick={handleSelectAll}>
           <FontAwesomeIcon 
@@ -778,26 +770,36 @@ const StudentTable = ({
     {
       key: 'lrn',
       label: 'LRN',
+      headerStyle: withColumnWidth('12%', 100),
+      cellStyle: withColumnWidth('12%', 100),
       renderCell: ({ row }) => renderField(row, 'lrn')
     },
     {
       key: 'first_name',
       label: 'FIRST NAME',
+      headerStyle: withColumnWidth('22%', 120),
+      cellStyle: withColumnWidth('22%', 120),
       renderCell: ({ row }) => renderField(row, 'first_name')
     },
     {
       key: 'last_name',
       label: 'LAST NAME',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
       renderCell: ({ row }) => renderField(row, 'last_name')
     },
     {
       key: 'grade',
       label: 'GRADE',
+      headerStyle: withColumnWidth('10%', 80),
+      cellStyle: withColumnWidth('10%', 80),
       renderCell: ({ row }) => renderField(row, 'grade')
     },
     {
       key: 'section',
       label: 'SECTION',
+      headerStyle: withColumnWidth('12%', 110),
+      cellStyle: withColumnWidth('12%', 110),
       renderHeader: () => (
         <div className={styles.sectionHeader}>
           <div className={styles.sectionHeaderRow}>
@@ -815,6 +817,8 @@ const StudentTable = ({
     {
       key: 'qr_code',
       label: 'QR CODE',
+      headerStyle: withColumnWidth('8%', 70),
+      cellStyle: withColumnWidth('8%', 70),
       renderCell: ({ row }) => (
         <div className={styles.icon}>
           <FontAwesomeIcon 
@@ -829,11 +833,15 @@ const StudentTable = ({
     {
       key: 'edit',
       label: 'EDIT',
+      headerStyle: withColumnWidth('8%', 70),
+      cellStyle: withColumnWidth('8%', 70),
       renderCell: ({ row }) => renderEditCell(row)
     },
     {
       key: 'delete',
       label: 'DELETE',
+      headerStyle: withColumnWidth('8%', 70),
+      cellStyle: withColumnWidth('8%', 70),
       renderCell: ({ row }) => (
         <div className={styles.icon}>
           <FontAwesomeIcon 
@@ -872,17 +880,16 @@ const StudentTable = ({
           renderLabel: (grade) => `Grade ${grade}`
         }}
         infoText={getTableInfoMessage()}
+        selectedInfoText={visibleSelectedStudents.length > 0 ? `${visibleSelectedStudents.length} selected` : ''}
         tableLabel="Students"
         onRowClick={({ rowId, event }) => handleRowClick(rowId, event)}
+        isRowSelected={({ row }) => selectedStudents.includes(row.id)}
         rowClassName={getVisibleRowClassName}
         expandedRowId={expandedRow}
         renderExpandedRow={({ row }) => renderExpandedContent(row)}
-        expandedRowColSpan={9}
         persistExpandedRows={true}
         hideMainRowWhenExpanded={true}
         getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
-        striped={false}
-        noDataColSpan={9}
         className={styles.studentTableContainer}
         wrapperClassName={styles.tableWrapper}
       />

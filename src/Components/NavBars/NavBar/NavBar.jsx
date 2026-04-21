@@ -16,6 +16,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
 import { supabase } from '../../../lib/supabase.js';
+import minimalist_stonino from  '../../../assets/minimalist_stonino.png';
 
 
 function NavBar({ userType = 'admin', onCollapseChange }) {
@@ -89,6 +90,15 @@ function NavBar({ userType = 'admin', onCollapseChange }) {
     <>
       <div className={styles.header}>
 
+        <div className={styles.schoolContainer}>
+          <div className={styles.schoolLogoContainer}>
+            <img className={styles.schoolLogo} src={minimalist_stonino} alt="" />
+          </div>
+          <div className={styles.schoolName}>
+            <span className={styles.schoolTitle}>Stoñino</span>
+            <span className={styles.schoolSubtitle}>High School</span>
+          </div>
+        </div>
 
         {isMobile ? (
           <button className={styles.iconButton} onClick={closeMobile} aria-label="Close sidebar">

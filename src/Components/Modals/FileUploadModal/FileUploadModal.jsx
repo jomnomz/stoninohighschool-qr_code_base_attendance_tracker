@@ -7,6 +7,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import { useToast } from '../../Toast/ToastContext/ToastContext.jsx';
 import MessageModalLabel from '../../UI/Labels/MessageModalLabel/MessageModalLabel.jsx';
 import InfoBox from '../../UI/InfoBoxes/InfoBox/InfoBox.jsx';
+import UploadIcon from '@mui/icons-material/Upload';
 
 function FileUploadModal({ 
   isOpen, 
@@ -115,12 +116,32 @@ function FileUploadModal({
             return (
                 <InfoBox type="important">
                     <strong>Important:</strong> All records must be valid. If any record has errors, the entire upload will be rejected.
+                    <p className={styles.templateLink}>
+                        <a 
+                            href={getFieldMappingLink()} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={styles.downloadLink}
+                        >
+                            <span><span className={styles.download}>Download:</span> {entityType} import template</span>
+                        </a>
+                    </p>
                 </InfoBox>
             );
         } else {
             return (
                 <InfoBox type="important">
                     <strong>Important:</strong> All records must be valid. If any record has errors, the entire upload will be rejected.
+                    <p className={styles.templateLink}>
+                        <a 
+                            href={getFieldMappingLink()} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={styles.downloadLink}
+                        >
+                            <span><span className={styles.download}>Download:</span> {entityType} import template</span>
+                        </a>
+                    </p>
                 </InfoBox>
             );
         }
@@ -275,16 +296,6 @@ function FileUploadModal({
 
                 {getImportantNote()}
                 
-                <p className={styles.templateLink}>
-                    <a 
-                        href={getFieldMappingLink()} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className={styles.downloadLink}
-                    >
-                        <strong>Download {entityType} import template</strong>
-                    </a>
-                </p>
                 
                 <div 
                     className={`${styles.dropArea} ${isDragOver ? styles.highlight : ''} ${file ? styles.hasFile : ''}`}
@@ -292,17 +303,22 @@ function FileUploadModal({
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                 >
-                    <InsertDriveFileIcon sx={{ fontSize: 90 }} className={styles.icon} /> 
-                    <p>Drag and drop your file here</p>
-                    <Button
-                        label="Select Files" 
-                        height="xs"
-                        width="sm"
-                        pill={true}
-                        color="primary"
-                        className={styles.browseBtn}
-                        onClick={handleBrowseClick}
-                    />
+                    <div className={styles.dropAreaRow}>
+                        
+                        <UploadIcon sx={{ fontSize: 30 }} className={styles.icon} />
+                        <p>Drag and drop your file here</p>
+                    </div>
+                    <div>
+                        <Button
+                            label="Select Files" 
+                            height="xs"
+                            width="sm"
+                            pill={true}
+                            color="primary"
+                            className={styles.browseBtn}
+                            onClick={handleBrowseClick}
+                        />
+                     
                     <input 
                         type="file" 
                         ref={fileInputRef}
@@ -310,6 +326,7 @@ function FileUploadModal({
                         accept=".xlsx, .xls, .csv"
                         className={styles.fileInput}
                     />
+                    </div>
                 </div>
                 
                 {file && (

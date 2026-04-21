@@ -12,6 +12,8 @@ import { faPenToSquare, faTrashCan, faCircle as fasCircle, faEnvelope, faList, f
 import ForwardToInboxIcon from '@mui/icons-material/ForwardToInbox';
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { useAuth } from '../../Authentication/AuthProvider/AuthProvider';
+import Table from '../Table/Table';
+import EntityDropdown from '../../UI/Buttons/EntityDropdown/EntityDropdown';
 
 console.log('🔄 TeacherTable.jsx LOADED - Updated with consistent expanded row');
 
@@ -65,6 +67,10 @@ const TeacherTable = ({
   const { success, error: toastError } = useToast();
   const { user, profile } = useAuth();
   const [selectedTeachers, setSelectedTeachers] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState('all');
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('');
 
   const teacherService = useMemo(() => new TeacherService(), []);
 
@@ -105,7 +111,7 @@ const TeacherTable = ({
     }
   }, [teachers, onTeacherDataUpdate]);
 
-  const filteredTeachers = useMemo(() => {
+  const searchFilteredTeachers = useMemo(() => {
     if (!searchTerm.trim()) return teachers;
     
     const searchLower = searchTerm.toLowerCase().trim();
@@ -124,7 +130,106 @@ const TeacherTable = ({
     );
   }, [teachers, searchTerm, teacherAssignments]);
 
+  const teacherGradeOptions = useMemo(() => {
+    const allGrades = Object.values(teacherAssignments)
+      .flatMap((assignment) => (assignment.sections || []).map((sectionEntry) => sectionEntry?.section?.grade?.grade_level))
+      .filter((gradeLevel) => gradeLevel !== null && gradeLevel !== undefined && gradeLevel !== '');
+
+    return [...new Set(allGrades.map((gradeLevel) => String(gradeLevel)))].sort((a, b) => Number(a) - Number(b));
+  }, [teacherAssignments]);
+
+  const teacherSubjectOptions = useMemo(() => {
+    const allSubjects = Object.values(teacherAssignments)
+      .flatMap((assignment) => (assignment.subjects || []).map((subjectEntry) => subjectEntry?.subject?.subject_code || ''))
+      .filter(Boolean);
+
+    return [...new Set(allSubjects)].sort((a, b) => a.localeCompare(b));
+  }, [teacherAssignments]);
+
+  const teacherSectionOptions = useMemo(() => {
+    const allSections = Object.values(teacherAssignments)
+      .flatMap((assignment) => (assignment.sections || []).map((sectionEntry) => sectionEntry?.section?.section_name))
+      .filter(Boolean);
+
+    return [...new Set(allSections)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [teacherAssignments]);
+
+  const teacherStatusOptions = useMemo(() => {
+    const statusesFromData = teachers
+      .map((teacher) => String(teacher.status || '').trim())
+      .filter(Boolean);
+
+    const schemaStatuses = ['pending', 'active', 'inactive'];
+    const statuses = [...schemaStatuses, ...statusesFromData];
+
+    return [...new Set(statuses)]
+      .sort((a, b) => a.localeCompare(b))
+      .map((status) => ({
+        label: status.charAt(0).toUpperCase() + status.slice(1).toLowerCase(),
+        value: status.toLowerCase(),
+      }));
+  }, [teachers]);
+
+  const filteredTeachers = useMemo(() => {
+    return searchFilteredTeachers.filter((teacher) => {
+      const assignments = teacherAssignments[teacher.id] || {};
+      const gradeLevels = (assignments.sections || [])
+        .map((sectionEntry) => String(sectionEntry?.section?.grade?.grade_level || ''))
+        .filter(Boolean);
+      const sectionNames = (assignments.sections || [])
+        .map((sectionEntry) => sectionEntry?.section?.section_name || '')
+        .filter(Boolean);
+      const subjectNames = (assignments.subjects || [])
+        .map((subjectEntry) => String(subjectEntry?.subject?.subject_code || '').trim())
+        .filter(Boolean);
+
+      if (selectedGrade !== 'all' && !gradeLevels.includes(String(selectedGrade))) {
+        return false;
+      }
+
+      if (selectedSectionFilter && !sectionNames.includes(selectedSectionFilter)) {
+        return false;
+      }
+
+      if (selectedSubjectFilter && !subjectNames.includes(selectedSubjectFilter)) {
+        return false;
+      }
+
+      if (selectedStatusFilter && String(teacher.status || '').toLowerCase() !== selectedStatusFilter.toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [searchFilteredTeachers, teacherAssignments, selectedGrade, selectedSectionFilter, selectedSubjectFilter, selectedStatusFilter]);
+
   const sortedTeachers = useMemo(() => sortTeachers(filteredTeachers), [filteredTeachers]);
+
+  const recordCountMessage = useMemo(() => {
+    const count = sortedTeachers.length;
+    const phrases = [];
+
+    if (selectedSectionFilter) {
+      phrases.push(`in Section ${selectedSectionFilter}`);
+    }
+
+    if (selectedSubjectFilter) {
+      phrases.push(`teaching ${selectedSubjectFilter}`);
+    }
+
+    if (selectedStatusFilter) {
+      const prettyStatus = selectedStatusFilter.charAt(0).toUpperCase() + selectedStatusFilter.slice(1).toLowerCase();
+      phrases.push(`with ${prettyStatus} status`);
+    }
+
+    if (selectedGrade !== 'all') {
+      phrases.push(`in Grade ${selectedGrade}`);
+    } else {
+      phrases.push('across all grades');
+    }
+
+    return `Showing ${count} teacher/s ${phrases.join(' ')}`;
+  }, [sortedTeachers.length, selectedSectionFilter, selectedSubjectFilter, selectedStatusFilter, selectedGrade]);
 
   const visibleSelectedTeachers = useMemo(() => {
     const visibleTeacherIds = new Set(sortedTeachers.map(teacher => teacher.id));
@@ -220,7 +325,7 @@ const TeacherTable = ({
     const assignments = teacherAssignments[teacherId] || {};
     
     const subjects = assignments.subjects?.map(s => 
-      s.subject?.subject_name || s.subject?.subject_code || 'Unknown'
+      String(s.subject?.subject_name || '').trim()
     ).filter(name => name && name !== 'Unknown').join(', ') || 'None';
     
     const teachingSections = assignments.teachingAssignments?.map(assignment => {
@@ -237,6 +342,36 @@ const TeacherTable = ({
       'None';
     
     return { subjects, teachingSections, adviserDisplay };
+  };
+
+  const getTeacherFilterData = (teacher) => {
+    const assignments = teacherAssignments[teacher.id] || {};
+
+    const sections = (assignments.sections || [])
+      .map((sectionEntry) => ({
+        sectionName: sectionEntry?.section?.section_name || '',
+        gradeLevel: String(sectionEntry?.section?.grade?.grade_level || ''),
+        isAdviser: Boolean(sectionEntry?.is_adviser)
+      }))
+      .filter((item) => item.sectionName);
+
+    const gradeLevels = [...new Set(sections
+      .map((item) => item.gradeLevel)
+      .filter(Boolean))]
+      .sort((a, b) => Number(a) - Number(b));
+
+    const subjects = [...new Set((assignments.subjects || [])
+      .map((subjectEntry) => String(subjectEntry?.subject?.subject_code || '').trim())
+      .filter(Boolean))];
+
+    const primarySection = sections.find((section) => section.isAdviser) || sections[0] || null;
+
+    return {
+      sections,
+      gradeLevels,
+      subjects,
+      primarySection
+    };
   };
 
   const handleDeactivateClick = async (teacher) => {
@@ -565,201 +700,341 @@ const TeacherTable = ({
     };
 
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(teacher.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="9">
-          <div 
-            className={`${styles.studentCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.studentHeader}>
-              {formatTeacherName(teacher)}
-            </div>
-          
-            <div className={styles.details}>
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Teacher Details</strong>
-                </div>
-                <div className={styles.studentInfo}>Employee ID: {teacher.employee_id}</div>
-                <div className={styles.studentInfo}>Full Name: {formatTeacherName(teacher)}</div>
-                <div className={styles.studentInfo}>Email: {formatNA(teacher.email_address)}</div>
-                <div className={styles.studentInfo}>Phone: {formatNA(teacher.phone_no)}</div>
-                <div className={styles.studentInfo}>Status: {formatStatusText(teacher.status)}</div>
-              </div>
+      <div 
+        className={`${styles.studentCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.studentHeader}>
+          {formatTeacherName(teacher)}
+        </div>
 
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Teaching Assignments</strong>
-                </div>
-                <div className={styles.studentInfo}>Subjects: {assignments.subjects}</div>
-                <div className={styles.studentInfo}>Teaching Sections: {assignments.teachingSections}</div>
-                <div className={styles.studentInfo}>Adviser Section: {assignments.adviserDisplay}</div>
+        <div className={styles.details}>
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Teacher Details</strong>
+            </div>
+            <div className={styles.studentInfo}>Employee ID: {teacher.employee_id}</div>
+            <div className={styles.studentInfo}>Full Name: {formatTeacherName(teacher)}</div>
+            <div className={styles.studentInfo}>Email: {formatNA(teacher.email_address)}</div>
+            <div className={styles.studentInfo}>Phone: {formatNA(teacher.phone_no)}</div>
+            <div className={styles.studentInfo}>Status: {formatStatusText(teacher.status)}</div>
+          </div>
+
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Teaching Assignments</strong>
+            </div>
+            <div className={styles.studentInfo}>Subjects: {assignments.subjects}</div>
+            <div className={styles.studentInfo}>Teaching Sections: {assignments.teachingSections}</div>
+            <div className={styles.studentInfo}>Adviser Section: {assignments.adviserDisplay}</div>
+          </div>
+
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Record Information</strong>
+            </div>
+            {teacher.status === 'pending' && (
+              <div className={styles.studentInfo}>
+                Invitation Sent: {invitedAt}
               </div>
-          
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Record Information</strong>
-                </div>
-                {teacher.status === 'pending' && (
-                  <div className={styles.studentInfo}>
-                    Invitation Sent: {invitedAt}
-                  </div>
-                )}
-                <div className={styles.studentInfo}>
-                  Added: {addedAt}
-                </div>
-                <div className={styles.studentInfo}>
-                  Last Updated: {updatedAt}
-                </div>
-                <div className={styles.studentInfo}>
-                  Last Updated By: {updatedByName}
-                  {teacher.updated_by && teacher.updated_by_user && (
-                    <span style={{ color: '#666', fontSize: '0.9em', marginLeft: '8px' }}>
-                      ({teacher.updated_by_user.username || teacher.updated_by_user.email})
-                    </span>
-                  )}
-                </div>
-              </div>
+            )}
+            <div className={styles.studentInfo}>
+              Added: {addedAt}
+            </div>
+            <div className={styles.studentInfo}>
+              Last Updated: {updatedAt}
+            </div>
+            <div className={styles.studentInfo}>
+              Last Updated By: {updatedByName}
+              {teacher.updated_by && teacher.updated_by_user && (
+                <span style={{ color: '#666', fontSize: '0.9em', marginLeft: '8px' }}>
+                  ({teacher.updated_by_user.username || teacher.updated_by_user.email})
+                </span>
+              )}
             </div>
           </div>
-        </td>
-      </tr>
+        </div>
+      </div>
     );
   };
 
-  if (loading || loadingAssignments) {
-    return (
-      <div className={styles.teacherTableContainer}>
-        <div className={styles.loading}>Loading teachers and assignments...</div>
-      </div>
-    );
-  }
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
 
-  if (error) {
-    return (
-      <div className={styles.teacherTableContainer}>
-        <div className={styles.error}>Error: {error}</div>
-      </div>
-    );
-  }
+  const columns = [
+    {
+      key: 'select',
+      label: '',
+      headerStyle: withColumnWidth('5%', 40),
+      cellStyle: withColumnWidth('5%', 40),
+      renderHeader: () => (
+        <div className={styles.icon} onClick={handleSelectAll}>
+          <FontAwesomeIcon 
+            icon={allVisibleSelected ? fasCircle : farCircle} 
+            style={{ 
+              cursor: 'pointer',
+              color: allVisibleSelected ? '#0f6b58' : ''
+            }}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const isSelected = selectedTeachers.includes(row.id);
+        return (
+          <div className={styles.icon} onClick={(e) => handleTeacherSelect(row.id, e)}>
+            <FontAwesomeIcon 
+              icon={isSelected ? fasCircle : farCircle} 
+              style={{ 
+                cursor: 'pointer', 
+                color: isSelected ? '#0f6b58' : ''
+              }}
+            />
+          </div>
+        );
+      }
+    },
+    {
+      key: 'employee_id',
+      label: 'EMPLOYEE ID',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => renderField(row, 'employee_id')
+    },
+    {
+      key: 'first_name',
+      label: 'FIRST NAME',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => renderField(row, 'first_name')
+    },
+    {
+      key: 'last_name',
+      label: 'LAST NAME',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => renderField(row, 'last_name')
+    },
+    {
+      key: 'email_address',
+      label: 'EMAIL ADDRESS',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => renderField(row, 'email_address')
+    },
+    {
+      key: 'grade',
+      label: 'GRADE',
+      headerStyle: withColumnWidth('8%', 90),
+      cellStyle: withColumnWidth('8%', 90),
+      renderCell: ({ row }) => {
+        const teacherData = getTeacherFilterData(row);
+        return teacherData.gradeLevels.length > 0 ? teacherData.gradeLevels.join(' | ') : 'N/A';
+      }
+    },
+    {
+      key: 'subject',
+      label: 'SUBJECT',
+      headerStyle: withColumnWidth('12%', 130),
+      cellStyle: withColumnWidth('12%', 130),
+      renderHeader: () => (
+        <div className={styles.headerWithFilter}>
+          <span>SUBJECT</span>
+          <EntityDropdown
+            options={teacherSubjectOptions}
+            selectedValue={selectedSubjectFilter}
+            onSelect={setSelectedSubjectFilter}
+            allLabel="All Subjects"
+            buttonTitle="Filter by subject"
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const teacherData = getTeacherFilterData(row);
+        const subjects = teacherData.subjects;
+
+        if (subjects.length === 0) {
+          return 'N/A';
+        }
+
+        const displaySubject = selectedSubjectFilter && subjects.includes(selectedSubjectFilter)
+          ? selectedSubjectFilter
+          : subjects[0];
+
+        const remainingCount = Math.max(subjects.length - 1, 0);
+
+        return (
+          <div className={styles.entityCellWithBadge}>
+            <span>{displaySubject}</span>
+            {remainingCount > 0 && (
+              <span className={styles.entityCountBadge} title="Click row to see all subjects">
+                +{remainingCount}
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      headerStyle: withColumnWidth('12%', 130),
+      cellStyle: withColumnWidth('12%', 130),
+      renderHeader: () => (
+        <div className={styles.headerWithFilter}>
+          <span>SECTION</span>
+          <EntityDropdown
+            options={teacherSectionOptions}
+            selectedValue={selectedSectionFilter}
+            onSelect={setSelectedSectionFilter}
+            allLabel="All Sections"
+            buttonTitle="Filter by section"
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const teacherData = getTeacherFilterData(row);
+        const uniqueSections = [...new Set(teacherData.sections.map((item) => item.sectionName).filter(Boolean))];
+
+        if (uniqueSections.length === 0) {
+          return 'N/A';
+        }
+
+        const defaultSection = teacherData.primarySection?.sectionName || uniqueSections[0];
+        const displaySection = selectedSectionFilter && uniqueSections.includes(selectedSectionFilter)
+          ? selectedSectionFilter
+          : defaultSection;
+
+        const remainingCount = Math.max(uniqueSections.length - 1, 0);
+
+        return (
+          <div className={styles.entityCellWithBadge}>
+            <span>{displaySection}</span>
+            {remainingCount > 0 && (
+              <span className={styles.entityCountBadge} title="Click row to see all sections">
+                +{remainingCount} 
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'status',
+      label: 'STATUS',
+      headerStyle: withColumnWidth('12%', 120),
+      cellStyle: withColumnWidth('12%', 120),
+      renderHeader: () => (
+        <div className={styles.headerWithFilter}>
+          <span>STATUS</span>
+          <EntityDropdown
+            options={teacherStatusOptions}
+            selectedValue={selectedStatusFilter}
+            onSelect={setSelectedStatusFilter}
+            allLabel="All Statuses"
+            buttonTitle="Filter by status"
+            getOptionLabel={(option) => option.label}
+            getOptionValue={(option) => option.value}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => renderField(row, 'status', false)
+    },
+    {
+      key: 'invite',
+      label: 'INVITE',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => {
+        const isInviteDisabled = !row.email_address || 
+          row.status === 'active' || 
+          row.status === 'pending' || 
+          row.status === 'inactive';
+
+        return (
+          <div className={styles.icon}>
+            <ForwardToInboxIcon sx={{ fontSize: 37, mb: -0.7 }}
+              className="action-button"
+              style={{ 
+                cursor: isInviteDisabled ? 'default' : 'pointer',
+                color: row.status === 'pending' ? '#f59e0b' : 
+                       row.status === 'active' ? '#10b981' : 
+                       row.status === 'inactive' ? '#ef4444' : 
+                       '',
+                opacity: isInviteDisabled ? 0.6 : 1
+              }}
+              title={row.status === 'pending' ? 'Invitation sent - pending account creation' : 
+                     row.status === 'active' ? 'Account active' : 
+                     row.status === 'inactive' ? 'Account suspended' : 
+                     !row.email_address ? 'No email address' :
+                     'Send account invitation'}
+              onClick={(e) => handleInviteClick(row, e)}
+            />
+          </div>
+        );
+      }
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      headerStyle: withColumnWidth('10%', 100),
+      cellStyle: withColumnWidth('10%', 100),
+      renderCell: ({ row }) => renderEditCell(row)
+    },
+    {
+      key: 'delete',
+      label: 'DELETE',
+      headerStyle: withColumnWidth('8%', 88),
+      cellStyle: withColumnWidth('8%', 88),
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faTrashCan} 
+            className="action-button"
+            onClick={(e) => handleDeleteClick(row, e)}
+          />
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className={styles.teacherTableContainer} ref={tableRef}>
-      <div className={styles.teachersTable}>
-        <div className={styles.tableWrapper}>
-          <table className={styles.teachersTable}>
-            <thead>
-              <tr>
-                <th>
-                  <div className={styles.icon} onClick={handleSelectAll}>
-                    <FontAwesomeIcon 
-                      icon={allVisibleSelected ? fasCircle : farCircle} 
-                      style={{ 
-                        cursor: 'pointer',
-                        color: allVisibleSelected ? '#007bff' : '' 
-                      }}
-                    />
-                  </div>
-                </th>
-                <th>EMPLOYEE ID</th>
-                <th>FIRST NAME</th>
-                <th>LAST NAME</th>
-                <th>EMAIL ADDRESS</th>
-                <th>STATUS</th>
-                <th>INVITE</th>
-                <th>EDIT</th>
-                <th>DELETE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedTeachers.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className={styles.noTeachers}>
-                    {searchTerm 
-                      ? `No teachers found matching "${searchTerm}"`
-                      : 'No teachers found'
-                    }
-                  </td>
-                </tr>
-              ) : (
-                sortedTeachers.map((teacher, index) => {
-                  const visibleRowIndex = sortedTeachers
-                    .slice(0, index)
-                    .filter(t => !isRowExpanded(t.id))
-                    .length;
-                  
-                  const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                  const isSelected = selectedTeachers.includes(teacher.id);
-                  const isInviteDisabled = !teacher.email_address || 
-                                          teacher.status === 'active' || 
-                                          teacher.status === 'pending' || 
-                                          teacher.status === 'inactive';
-
-                  return (
-                    <React.Fragment key={teacher.id}>
-                      {!isRowExpanded(teacher.id) && (
-                        <tr 
-                          className={`${styles.teacherRow} ${rowColorClass} ${editingTeacher === teacher.id ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-                          onClick={(e) => handleRowClick(teacher.id, e)}
-                        >
-                          <td>
-                            <div className={styles.icon} onClick={(e) => handleTeacherSelect(teacher.id, e)}>
-                              <FontAwesomeIcon 
-                                icon={isSelected ? fasCircle : farCircle} 
-                                style={{ 
-                                  cursor: 'pointer', 
-                                  color: isSelected ? '#007bff' : '' 
-                                }}
-                              />
-                            </div>
-                          </td>
-                          <td>{renderField(teacher, 'employee_id')}</td>
-                          <td>{renderField(teacher, 'first_name')}</td>
-                          <td>{renderField(teacher, 'last_name')}</td>
-                          <td>{renderField(teacher, 'email_address')}</td>
-                          <td>{renderField(teacher, 'status', false)}</td>
-                          <td>
-                            <div className={styles.icon}>
-                              <ForwardToInboxIcon sx={{ fontSize: 37, mb: -0.7 }}
-                                className="action-button"
-                                style={{ 
-                                  cursor: isInviteDisabled ? 'default' : 'pointer',
-                                  color: teacher.status === 'pending' ? '#f59e0b' : 
-                                         teacher.status === 'active' ? '#10b981' : 
-                                         teacher.status === 'inactive' ? '#ef4444' : 
-                                         '',
-                                  opacity: isInviteDisabled ? 0.6 : 1
-                                }}
-                                title={teacher.status === 'pending' ? 'Invitation sent - pending account creation' : 
-                                       teacher.status === 'active' ? 'Account active' : 
-                                       teacher.status === 'inactive' ? 'Account suspended' : 
-                                       !teacher.email_address ? 'No email address' :
-                                       'Send account invitation'}
-                                onClick={(e) => handleInviteClick(teacher, e)}
-                              />
-                            </div>
-                          </td>
-                          <td>{renderEditCell(teacher)}</td>
-                          <td>
-                            <div className={styles.icon}>
-                              <FontAwesomeIcon 
-                                icon={faTrashCan} 
-                                className="action-button"
-                                onClick={(e) => handleDeleteClick(teacher, e)}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      {renderExpandedRow(teacher)}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Table
+        columns={columns}
+        rows={sortedTeachers}
+        getRowId={(row) => row.id}
+        loading={loading || loadingAssignments}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={searchTerm ? `No teachers found matching "${searchTerm}"` : 'No teachers found'}
+        containerRef={tableRef}
+        tableLabel="Teacher records"
+        onRowClick={({ row, event }) => handleRowClick(row.id, event)}
+        rowClassName={({ row }) => {
+          return `${styles.teacherRow} ${editingTeacher === row.id ? styles.editingRow : ''}`;
+        }}
+        isRowSelected={({ row }) => selectedTeachers.includes(row.id)}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedRow(row)}
+        persistExpandedRows
+        hideMainRowWhenExpanded
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        striped={true}
+        stickyHeader
+        wrapperClassName={styles.tableWrapper}
+        infoText={recordCountMessage}
+        selectedInfoText={visibleSelectedTeachers.length > 0 ? `${visibleSelectedTeachers.length} selected` : ''}
+        gradeTabs={{
+          options: teacherGradeOptions,
+          currentValue: selectedGrade,
+          onChange: setSelectedGrade,
+          showAll: true,
+          allLabel: 'All',
+          renderLabel: (gradeLevel) => `Grade ${gradeLevel}`,
+          getOptionValue: (gradeLevel) => String(gradeLevel),
+        }}
+      />
     </div>
   );
 };

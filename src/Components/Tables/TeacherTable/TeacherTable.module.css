@@ -2,10 +2,11 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+   --table-content-width: 98%;
 }
 
 .tableWrapper {
-  max-height: 59vh;
+  max-height: 66vh;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -47,22 +48,7 @@ tbody tr {
   border-spacing: 0;
 }
 
-.rowEven {
-  background-color: white !important;
-}
 
-.rowOdd {
-  background-color: #f2f2f2 !important;
-}
-
-.teacherRow:hover {
-  background-color: #8a8a8a !important;
-  cursor: pointer;
-}
-
-.teacherRow:hover td {
-  color: white;
-}
 
 .classContainers {
   display: flex;
@@ -286,13 +272,7 @@ tbody tr {
   box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.25);
 }
 
-.selectedRow {
-  background-color: #e3f2fd !important;
-}
 
-.selectedRow:hover {
-  background-color: #bbdefb !important;
-}
 
 .statusBadge {
   padding: 4px 10px;
@@ -400,6 +380,32 @@ tbody tr {
 
 .action-button {
   cursor: pointer;
+}
+
+.headerWithFilter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.entityCellWithBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.entityCountBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #5f6b78;
+  background: #eef1f5;
+  border: 1px solid #d9e0e8;
+  line-height: 1.3;
 }
 
 /* Column widths using percentages for 11 columns */

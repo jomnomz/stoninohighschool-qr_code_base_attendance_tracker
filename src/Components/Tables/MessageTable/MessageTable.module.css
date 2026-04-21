@@ -2,93 +2,62 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  --table-content-width: 98%;
 }
 
 .tableWrapper {
   max-height: 59vh;
-  overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
   width: 98%;
 }
 
-.tableWrapper table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0;
-  table-layout: auto;
-}
-
-.tableWrapper thead th {
-  position: sticky;
-  top: 0;
-  background-color: #f2f2f2;
-  z-index: 10;
-  box-shadow: 0 1px 0 #e0e0e0;
-}
-
-th {
-  padding: 12px;
-  text-align: center;
-  font-weight: bold;
-}
-
-td, th {
-  text-align: center;
-  padding: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-tbody tr {
-  margin: 0;
-  padding: 0;
-  border-spacing: 0;
-}
-
-.rowEven {
-  background-color: white !important;
-}
-
-.rowOdd {
-  background-color: #f2f2f2 !important;
-}
-
-.studentRow:hover {
-  background-color: #8a8a8a !important;
+.messageRow {
   cursor: pointer;
 }
 
-.studentRow:hover td {
-  color: white;
+.messageRow:hover {
+  background-color: #edf7f3 !important;
+}
+
+.messageRow:hover td {
+  color: #23344f;
+}
+
+.rowExpanded {
+  background-color: #edf7f3 !important;
 }
 
 .expandRow {
-  display: none;
+  background-color: #ffffff;
 }
 
-.expandRowVisible {
-  display: table-row;
-}
-
-.expandRowVisible td {
+.expandRow td {
   padding: 0;
-  background-color: #f9f9f9;
+  border: none;
 }
 
 .messageCard {
-  background-color: #f9f9f9;
-  border-radius: 10px;
-  padding: 20px;
-  margin: 5px;
+  background-color: #f7fafc;
+  border: 1px solid #dde5ef;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 35, 58, 0.08);
   text-align: left;
+  padding: 22px;
+  margin: 8px 12px;
 }
 
-.classContainers {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 5px;
+.expandableCard {
+  animation: expandIn 0.22s ease;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .details {
@@ -98,81 +67,57 @@ tbody tr {
 }
 
 .messageHeader {
-  font-weight: bold;
-  font-size: 30px;
-  margin-bottom: 10px;
+  font-weight: 800;
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  color: #24344a;
 }
 
 .messageInfo {
-  font-size: 15px;
+  font-size: 0.95rem;
   margin: 4px 0;
+  color: #2b3a51;
 }
 
-.loading, .error, .noMessage {
-  text-align: center;
-  padding: 20px;
-  font-size: 16px;
-}
-
-.error {
-  color: #d32f2f;
-  background-color: #ffebee;
-  border: 1px solid #f44336;
-  border-radius: 4px;
-}
-
-.noMessage {
-  color: #6c757d;
+.demoInfo {
+  color: #66788f;
   font-style: italic;
-  text-align: center;
-  padding: 40px;
-}
-
-.tableInfo {
-  display: flex;
-  flex-direction: column;
-  justify-content: end;
-}
-
-.tableInfo p {
-  margin: 0;
-  font-weight: bold;
-  color: #003a02;
-}
-
-.recipientCell, .studentCell, .messageCell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.messageCell {
-  gap: 5px;
 }
 
 .fullMessage {
-  margin-top: 20px;
+  margin-top: 18px;
   padding: 15px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  background-color: #edf3f9;
+  border-radius: 10px;
+  border: 1px solid #dde5ef;
 }
 
 .messageText {
   margin-top: 10px;
   padding: 10px;
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  background-color: #ffffff;
+  border: 1px solid #d8e1ec;
+  border-radius: 6px;
+  font-size: 0.9rem;
   line-height: 1.5;
+  color: #23344f;
 }
 
-.rowExpanded {
-  background-color: #e3f2fd !important;
+.recipientCell,
+.studentCell,
+.messageCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 
-/* SECTION HEADER STYLES */
+.subtext {
+  color: #66788f;
+  font-size: 0.78rem;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -188,45 +133,8 @@ tbody tr {
 }
 
 .sectionHeader span {
-  font-weight: bold;
+  font-weight: 800;
   white-space: nowrap;
-}
-
-/* Column widths for 6 columns */
-.tableWrapper table th:nth-child(1),
-.tableWrapper table td:nth-child(1) {
-  width: 20%;
-  min-width: 150px;
-}
-
-.tableWrapper table th:nth-child(2),
-.tableWrapper table td:nth-child(2) {
-  width: 20%;
-  min-width: 150px;
-}
-
-.tableWrapper table th:nth-child(3),
-.tableWrapper table td:nth-child(3) {
-  width: 10%;
-  min-width: 80px;
-}
-
-.tableWrapper table th:nth-child(4),
-.tableWrapper table td:nth-child(4) {
-  width: 10%;
-  min-width: 80px;
-}
-
-.tableWrapper table th:nth-child(5),
-.tableWrapper table td:nth-child(5) {
-  width: 25%;
-  min-width: 200px;
-}
-
-.tableWrapper table th:nth-child(6),
-.tableWrapper table td:nth-child(6) {
-  width: 15%;
-  min-width: 150px;
 }
 
 @media (max-width: 1400px) {

@@ -66,6 +66,13 @@ function Button(props) {
             color: '#ffffff', 
             border: 'none',
         },
+        tertiary: { 
+            backgroundColor: '#627584', 
+            activeBackground: '#4A5864', 
+            hoverBackground: '#536370', 
+            color: '#ffffff', 
+            border: 'none',
+        },
         success: { 
             backgroundColor: '#016C3F', 
             activeBackground: '#059669', 
@@ -80,17 +87,53 @@ function Button(props) {
             color: '#ffffff', 
             border: 'none',
         },
-        danger: { 
-            backgroundColor: '#dc2626', 
-            activeBackground: '#b91c1c', 
-            hoverBackground: '#ef4444', 
+        terracotta: { 
+            backgroundColor: '#A6634B', 
+            activeBackground: '#854F3C', 
+            hoverBackground: '#B8735C', 
             color: '#ffffff', 
             border: 'none',
         },
-        grades: { 
-            backgroundColor: "#A6A6A5",
-            activeBackground: "#112F15",
-            hoverBackground: "#d0d0d0",
+        coolGray: { 
+            backgroundColor: '#9da4a5', 
+            activeBackground: '#384244', 
+            hoverBackground: '#5C6D70', 
+            color: '#ffffff', 
+            border: 'none',
+        },
+        danger: { 
+            backgroundColor: '#BC4749', 
+            activeBackground: '#A2393B', 
+            hoverBackground: '#8C3133', 
+            color: '#ffffff', 
+            border: 'none',
+        },
+        ocean: { 
+            backgroundColor: '#3E5C76', // Deep, muted slate blue
+            activeBackground: '#2C4356', // Darker navy-slate for click state
+            hoverBackground: '#334D63', // Subtle darkening for hover
+            color: '#ffffff', 
+            border: 'none',
+        },
+        ghost: { 
+            backgroundColor: '#f8fafb', // Very light gray/white
+            activeBackground: '#e2e8f0', 
+            hoverBackground: '#edf2f7', 
+            color: '#627584', // Slate text
+            border: '1px solid #cbd5e1',
+        },
+        warmStone: { 
+            backgroundColor: '#7A7672', 
+            activeBackground: '#5E5B58', 
+            hoverBackground: '#8E8A85', 
+            color: '#ffffff', 
+            border: 'none',
+        },
+
+        plum: { 
+            backgroundColor: '#6D597A', 
+            activeBackground: '#4E4058', 
+            hoverBackground: '#826A91', 
             color: '#ffffff', 
             border: 'none',
         },
@@ -160,6 +203,9 @@ function Button(props) {
     const backgroundColor = getBackgroundColor();
     const textColor = getTextColor();
     const border = getBorder();
+    const resolvedBorderBottom = line
+        ? (active ? '2px solid #0f6b58' : (isHovered ? '2px solid rgba(15, 107, 88, 0.55)' : '2px solid transparent'))
+        : (border === 'none' ? 'none' : border);
 
     const buttonStyle = {
         ...heightStyle,
@@ -168,10 +214,13 @@ function Button(props) {
         color: textColor, 
         border: border,
         borderRadius: line ? '0px' : getBorderRadius(pill, pillLeft, pillRight),
-        borderBottom: line
-            ? (active ? '2px solid #0f6b58' : (isHovered ? '2px solid rgba(15, 107, 88, 0.55)' : '2px solid transparent'))
-            : undefined,
-        boxShadow: line ? 'none' : (backgroundNone ? 'none' : (active ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)')),
+        borderBottom: resolvedBorderBottom,
+        boxShadow: 'none',
+        WebkitBoxShadow: 'none',
+        MozBoxShadow: 'none',
+        filter: 'none',
+        backgroundImage: 'none',
+        textShadow: 'none',
         transition: 'all 0.2s ease',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,

@@ -4,13 +4,14 @@ import { sortEntities } from '../../../Utils/SortEntities';
 import styles from './TeacherStudentViewTable.module.css';
 import { supabase } from '../../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faImage, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faImage } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../Authentication/AuthProvider/AuthProvider';
 import { useRowExpansion } from '../../Hooks/useRowExpansion';
 import Input from '../../UI/Input/Input';
 import Button from '../../UI/Buttons/Button/Button';
 import ReportGenerationModal from '../../Modals/ReportGenerationModal/ReportGenerationModal';
 import StudentReportModal from '../../Modals/StudentReportModal/StudentReportModal';
+import Table from '../Table/Table.jsx';
 
 const TeacherStudentViewTable = () => {
   const [students, setStudents] = useState([]);
@@ -25,7 +26,11 @@ const TeacherStudentViewTable = () => {
   const [showStudentReport, setShowStudentReport] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   
-  const { expandedRow, tableRef, toggleRow, isRowExpanded } = useRowExpansion();
+  const { expandedRow, tableRef, toggleRow } = useRowExpansion();
+  const classTabStorageKey = useMemo(() => {
+    const teacherScope = user?.email || 'anonymous';
+    return `teacher-students:selected-class:${teacherScope}`;
+  }, [user?.email]);
 
   const fetchTeacherClasses = async () => {
     if (!user) return;
@@ -173,7 +178,18 @@ const TeacherStudentViewTable = () => {
       setTeacherClasses(classes);
       
       if (classes.length > 0) {
-        setCurrentClass(classes[0].className);
+        let nextClass = classes[0].className;
+
+        try {
+          const savedClass = localStorage.getItem(classTabStorageKey);
+          if (savedClass && classes.some(cls => cls.className === savedClass)) {
+            nextClass = savedClass;
+          }
+        } catch (storageError) {
+          console.warn('Unable to restore selected class tab:', storageError);
+        }
+
+        setCurrentClass(nextClass);
       }
     } catch (err) {
       console.error('Error fetching teacher classes:', err);
@@ -294,6 +310,13 @@ const TeacherStudentViewTable = () => {
 
   const handleClassChange = (className) => {
     setCurrentClass(className);
+
+    try {
+      localStorage.setItem(classTabStorageKey, className);
+    } catch (storageError) {
+      console.warn('Unable to persist selected class tab:', storageError);
+    }
+
     toggleRow(null);
   };
 
@@ -340,48 +363,58 @@ const TeacherStudentViewTable = () => {
     return message;
   };
 
-  const renderExpandedRow = (student) => {
-    return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(student.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="5">
-          <div 
-            className={`${styles.studentCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.studentHeader}>
-              {formatStudentName(student)}
-            </div>
-          
-            <div className={styles.details}>
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Student Details</strong>
-                </div>
-                <div className={styles.studentInfo}>Student ID: {formatNA(student.lrn)}</div>
-                <div className={styles.studentInfo}>Section: {student.section}</div>
-                <div className={styles.studentInfo}>Phone Number: {formatNA(student.phone_number)}</div>
-              </div>
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
 
-              <div>
-                <div className={styles.studentInfo}>
-                  <strong>Guardian Information</strong>
-                </div>
-                <div className={styles.studentInfo}>
-                  Name of Parent: {formatNA(student.guardian_first_name)} {formatNA(student.guardian_last_name)}
-                </div>
-                <div className={styles.studentInfo}>
-                  Phone Number: {formatNA(student.guardian_phone_number)}
-                </div>
-                <div className={styles.studentInfo}>
-                  Email address: {formatNA(student.guardian_email)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    );
-  };
+  const columns = useMemo(() => [
+    {
+      key: 'lrn',
+      label: 'STUDENT ID',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
+      renderCell: ({ row }) => formatNA(row.lrn)
+    },
+    {
+      key: 'name',
+      label: 'NAME',
+      headerStyle: withColumnWidth('25%', 180),
+      cellStyle: withColumnWidth('25%', 180),
+      renderCell: ({ row }) => formatStudentName(row)
+    },
+    {
+      key: 'section',
+      label: 'SECTION',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
+      renderCell: ({ row }) => row.section
+    },
+    {
+      key: 'email',
+      label: 'EMAIL',
+      headerStyle: withColumnWidth('35%', 180),
+      cellStyle: withColumnWidth('35%', 180),
+      renderCell: ({ row }) => formatNA(row.email)
+    },
+    {
+      key: 'reports',
+      label: 'REPORTS',
+      headerStyle: withColumnWidth('10%', 80),
+      cellStyle: withColumnWidth('10%', 80),
+      renderCell: ({ row }) => (
+        <div className={styles.reportButtonContainer}>
+          <button 
+            className={styles.reportButton}
+            onClick={(e) => handleViewReport(row, e)}
+            title="View attendance reports"
+          >
+            <FontAwesomeIcon icon={faImage} />
+          </button>
+        </div>
+      )
+    }
+  ], []);
 
   if (loading && students.length === 0) {
     return (
@@ -399,6 +432,45 @@ const TeacherStudentViewTable = () => {
     );
   }
 
+  const renderExpandedRow = (student) => {
+    return (
+      <div 
+        className={`${styles.studentCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.studentHeader}>
+          {formatStudentName(student)}
+        </div>
+      
+        <div className={styles.details}>
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Student Details</strong>
+            </div>
+            <div className={styles.studentInfo}>Student ID: {formatNA(student.lrn)}</div>
+            <div className={styles.studentInfo}>Section: {student.section}</div>
+            <div className={styles.studentInfo}>Phone Number: {formatNA(student.phone_number)}</div>
+          </div>
+
+          <div>
+            <div className={styles.studentInfo}>
+              <strong>Guardian Information</strong>
+            </div>
+            <div className={styles.studentInfo}>
+              Name of Parent: {formatNA(student.guardian_first_name)} {formatNA(student.guardian_last_name)}
+            </div>
+            <div className={styles.studentInfo}>
+              Phone Number: {formatNA(student.guardian_phone_number)}
+            </div>
+            <div className={styles.studentInfo}>
+              Email address: {formatNA(student.guardian_email)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={styles.teacherStudentView} ref={tableRef}>
       <div className={styles.searchContainer}>
@@ -412,7 +484,7 @@ const TeacherStudentViewTable = () => {
           <Button
             label="Mark Valid Days"
             onClick={() => setShowReportGeneration(true)}
-            color="success"
+            color="ocean"
             height="sm"
             width="auto"
             title="Configure school days and attendance reports"
@@ -420,87 +492,37 @@ const TeacherStudentViewTable = () => {
         </div>
       </div>
 
-      <div className={styles.classContainers}>
-        {teacherClasses.map((cls) => (
-          <Button 
-            key={cls.className}
-            label={`${cls.className} | ${cls.subjectDisplay}`}
-            tabBottom={true}
-            height="xs"
-            width="lg"
-            color="grades"
-            active={currentClass === cls.className}
-            onClick={() => handleClassChange(cls.className)}
-            title={`${cls.grade}-${cls.section} - Subjects: ${cls.fullSubjects.map(s => `${s.subjectName} (${s.subjectCode})`).join(', ')}`}
-          />
-        ))}
-        
-        <div className={styles.tableInfo}>
-          <p>{getTableInfoMessage()}</p>
-        </div>
-      </div>
-
-      <div className={styles.tableWrapper}>
-        <table className={styles.studentsTable}>
-          <thead>
-            <tr>
-              <th>STUDENT ID</th>
-              <th>NAME</th>
-              <th>SECTION</th>
-              <th>EMAIL</th>
-              <th>REPORTS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.length === 0 ? (
-              <tr>
-                <td colSpan="5" className={styles.noStudents}>
-                  {searchTerm 
-                    ? `No students found matching "${searchTerm}"` 
-                    : `No students found in class ${currentClass}`}
-                </td>
-              </tr>
-            ) : (
-              filteredStudents.map((student, index) => {
-                const visibleRowIndex = filteredStudents
-                  .slice(0, index)
-                  .filter(s => !isRowExpanded(s.id))
-                  .length;
-                
-                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-
-                return (
-                  <React.Fragment key={student.id}>
-                    {!isRowExpanded(student.id) && (
-                      <tr 
-                        className={`${styles.studentRow} ${rowColorClass}`}
-                        onClick={(e) => handleRowClick(student.id, e)}
-                      >
-                        <td>{formatNA(student.lrn)}</td>
-                        <td>{formatStudentName(student)}</td>
-                        <td>{student.section}</td>
-                        <td>{formatNA(student.email)}</td>
-                        <td>
-                          <div className={styles.reportButtonContainer}>
-                            <button 
-                              className={styles.reportButton}
-                              onClick={(e) => handleViewReport(student, e)}
-                              title="View attendance reports"
-                            >
-                              <FontAwesomeIcon icon={faImage} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    {renderExpandedRow(student)}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table
+        columns={columns}
+        rows={filteredStudents}
+        getRowId={(row) => row.id}
+        loading={loading}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={searchTerm 
+          ? `No students found matching "${searchTerm}"` 
+          : `No students found in class ${currentClass}`}
+        containerRef={tableRef}
+        tableLabel="Teacher students"
+        onRowClick={({ row, event }) => handleRowClick(row.id, event)}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedRow(row)}
+        persistExpandedRows
+        hideMainRowWhenExpanded
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        className={styles.teacherStudentTableContainer}
+        wrapperClassName={styles.tableWrapper}
+        infoText={getTableInfoMessage()}
+        gradeTabs={{
+          options: teacherClasses,
+          currentValue: currentClass,
+          onChange: handleClassChange,
+          showAll: false,
+          renderLabel: (cls) => `${cls.className} | ${cls.subjectDisplay}`,
+          getOptionValue: (cls) => cls.className
+        }}
+        striped={true}
+        stickyHeader
+      />
 
       <ReportGenerationModal
         isOpen={showReportGeneration}

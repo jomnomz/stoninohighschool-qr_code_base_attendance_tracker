@@ -6,6 +6,7 @@ import { useEntityEdit } from '../../Hooks/useEntityEdit';
 import DeleteEntityModal from '../../Modals/DeleteEntityModal/DeleteEntityModal';
 import { useToast } from '../../Toast/ToastContext/ToastContext';
 import { supabase } from '../../../lib/supabase';
+import Table from '../Table/Table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faPenToSquare, 
@@ -136,7 +137,9 @@ const GradeSchedulesTable = ({
   searchTerm = '',
   onSelectedSchedulesUpdate,
   selectedSchedules = [],
-  onSingleDeleteClick
+  onSingleDeleteClick,
+  onEntityDataUpdate,
+  onInfoTextChange
 }) => {
   const [schedules, setSchedules] = useState([]);
   const [grades, setGrades] = useState([]);
@@ -469,238 +472,235 @@ const GradeSchedulesTable = ({
     const classDuration = calculateClassDuration(schedule.class_start, schedule.class_end);
     
     return (
-      <tr className={`${styles.expandRow} ${isRowExpanded(schedule.id) ? styles.expandRowActive : ''}`}>
-        <td colSpan="7">
-          <div 
-            className={`${styles.scheduleCard} ${styles.expandableCard}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.scheduleHeader}>
-              Grade {schedule.grade_level} Schedule
+      <div 
+        className={`${styles.scheduleCard} ${styles.expandableCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={styles.scheduleHeader}>
+          Grade {schedule.grade_level} Schedule
+        </div>
+        <div className={styles.details}>
+          <div>
+            <div className={styles.scheduleInfo}>
+              <strong>Schedule Details</strong>
             </div>
-            <div className={styles.details}>
-              <div>
-                <div className={styles.scheduleInfo}>
-                  <strong>Schedule Details</strong>
-                </div>
-                <div className={styles.scheduleInfo}>Class Duration: {formatDuration(classDuration)}</div>
-                <div className={styles.scheduleInfo}>Late Policy: Students are considered late {formatDuration(schedule.grace_period_minutes || 15)} after class starts</div>
-                <div className={styles.scheduleInfo}>Time: {formatTimeAMPM(schedule.class_start)} - {formatTimeAMPM(schedule.class_end)}</div>
-              </div>
-              
-              <div>
-                <div className={styles.scheduleInfo}>
-                  <strong>Record Information</strong>
-                </div>
-                <div className={styles.scheduleInfo}>Added: {addedAt}</div>
-                <div className={styles.scheduleInfo}>Last Updated: {updatedAt}</div>
-              </div>
-            </div>
+            <div className={styles.scheduleInfo}>Class Duration: {formatDuration(classDuration)}</div>
+            <div className={styles.scheduleInfo}>Late Policy: Students are considered late {formatDuration(schedule.grace_period_minutes || 15)} after class starts</div>
+            <div className={styles.scheduleInfo}>Time: {formatTimeAMPM(schedule.class_start)} - {formatTimeAMPM(schedule.class_end)}</div>
           </div>
-        </td>
-      </tr>
+          
+          <div>
+            <div className={styles.scheduleInfo}>
+              <strong>Record Information</strong>
+            </div>
+            <div className={styles.scheduleInfo}>Added: {addedAt}</div>
+            <div className={styles.scheduleInfo}>Last Updated: {updatedAt}</div>
+          </div>
+        </div>
+      </div>
     );
   };
-
-  if (loading) return (
-    <div className={styles.scheduleTableContainer}>
-      <div className={styles.loading}>Loading grade schedules...</div>
-    </div>
-  );
-  
-  if (error) return (
-    <div className={styles.scheduleTableContainer}>
-      <div className={styles.error}>Error: {error}</div>
-    </div>
-  );
 
   const getTableInfoMessage = () => {
     const scheduleCount = filteredSchedules.length;
-    const selectedCount = selectedSchedules.length;
     
     if (searchTerm) {
-      return `Found ${scheduleCount} schedule/s matching "${searchTerm}"${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+      return `Found ${scheduleCount} schedule/s matching "${searchTerm}"`;
     }
     
-    return `Showing ${scheduleCount} grade schedule/s${selectedCount > 0 ? ` (${selectedCount} selected)` : ''}`;
+    return `Showing ${scheduleCount} grade schedule/s`;
   };
 
-  const renderRegularRow = (schedule, rowColorClass, visibleRowIndex, isSelected) => {
-    const isEditing = editingId === schedule.id;
-    
-    return (
-      <tr 
-        key={schedule.id}
-        className={`${styles.scheduleRow} ${rowColorClass} ${isEditing ? styles.editingRow : ''} ${isSelected ? styles.selectedRow : ''}`}
-        onClick={() => toggleRow(schedule.id)}
-      >
-        <td>
-          <div className={styles.icon} onClick={(e) => handleScheduleSelect(schedule.id, e)}>
+  useEffect(() => {
+    if (onInfoTextChange) {
+      onInfoTextChange(getTableInfoMessage());
+    }
+  }, [onInfoTextChange, searchTerm, filteredSchedules.length, selectedSchedules.length]);
+
+  useEffect(() => {
+    if (onEntityDataUpdate) {
+      onEntityDataUpdate(schedules);
+    }
+  }, [schedules, onEntityDataUpdate]);
+
+  const withColumnWidth = (width, minWidth) => ({
+    width,
+    minWidth: `${minWidth}px`
+  });
+
+  const columns = [
+    {
+      key: 'select',
+      label: '',
+      headerStyle: withColumnWidth('5%', 40),
+      cellStyle: withColumnWidth('5%', 40),
+      renderHeader: () => (
+        <div className={styles.icon} onClick={handleSelectAll}>
+          <FontAwesomeIcon 
+            icon={allVisibleSelected ? fasCircle : farCircleRegular}
+            style={{ cursor: 'pointer', color: allVisibleSelected ? '#0f6b58' : '' }}
+          />
+        </div>
+      ),
+      renderCell: ({ row }) => {
+        const isSelected = selectedSchedules.includes(row.id);
+        return (
+          <div className={styles.icon} onClick={(e) => handleScheduleSelect(row.id, e)}>
             <FontAwesomeIcon 
-              icon={isSelected ? fasCircle : farCircleRegular} 
-              style={{ 
-                cursor: 'pointer', 
-                color: isSelected ? '#007bff' : '' 
-              }}
+              icon={isSelected ? fasCircle : farCircleRegular}
+              style={{ cursor: 'pointer', color: isSelected ? '#0f6b58' : '' }}
             />
           </div>
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <select
-              value={editFormData.grade_level || ''}
-              onChange={(e) => updateEditField('grade_level', e.target.value)}
-              className={`${styles.editSelect} ${validationErrors.grade_level ? styles.errorInput : ''}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <option value="">Select Grade</option>
-              {grades.map(grade => (
-                <option key={grade.id} value={grade.grade_level}>
-                  Grade {grade.grade_level}
-                </option>
-              ))}
-            </select>
-          ) : (
-            `Grade ${schedule.grade_level}`
-          )}
-        </td>
-        
-        <td>
-          {isEditing ? (
+        );
+      }
+    },
+    {
+      key: 'grade_level',
+      label: 'GRADE LEVEL',
+      headerStyle: withColumnWidth('15%', 100),
+      cellStyle: withColumnWidth('15%', 100),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return `Grade ${row.grade_level}`;
+
+        return (
+          <select
+            value={editFormData.grade_level || ''}
+            onChange={(e) => updateEditField('grade_level', e.target.value)}
+            className={`${styles.editSelect} ${validationErrors.grade_level ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="">Select Grade</option>
+            {grades.map(grade => (
+              <option key={grade.id} value={grade.grade_level}>
+                Grade {grade.grade_level}
+              </option>
+            ))}
+          </select>
+        );
+      }
+    },
+    {
+      key: 'class_start',
+      label: 'CLASS START',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return formatTimeAMPM(row.class_start);
+
+        return (
+          <input
+            type="time"
+            value={editFormData.class_start || ''}
+            onChange={(e) => updateEditField('class_start', e.target.value)}
+            className={`${styles.editInput} ${validationErrors.class_start ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      }
+    },
+    {
+      key: 'class_end',
+      label: 'CLASS END',
+      headerStyle: withColumnWidth('15%', 120),
+      cellStyle: withColumnWidth('15%', 120),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return formatTimeAMPM(row.class_end);
+
+        return (
+          <input
+            type="time"
+            value={editFormData.class_end || ''}
+            onChange={(e) => updateEditField('class_end', e.target.value)}
+            className={`${styles.editInput} ${validationErrors.class_end ? styles.errorInput : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      }
+    },
+    {
+      key: 'grace_period_minutes',
+      label: 'GRACE PERIOD',
+      headerStyle: withColumnWidth('30%', 140),
+      cellStyle: withColumnWidth('30%', 140),
+      renderCell: ({ row }) => {
+        const isEditing = editingId === row.id;
+        if (!isEditing) return formatDuration(row.grace_period_minutes || 15);
+
+        return (
+          <div className={styles.graceInputContainer}>
             <input
-              type="time"
-              value={editFormData.class_start || ''}
-              onChange={(e) => updateEditField('class_start', e.target.value)}
-              className={`${styles.editInput} ${validationErrors.class_start ? styles.errorInput : ''}`}
+              type="number"
+              min="0"
+              max="120"
+              step="5"
+              value={editFormData.grace_period_minutes || '15'}
+              onChange={(e) => updateEditField('grace_period_minutes', e.target.value)}
+              className={`${styles.editInput} ${styles.graceInput} ${validationErrors.grace_period_minutes ? styles.errorInput : ''}`}
               onClick={(e) => e.stopPropagation()}
             />
-          ) : (
-            formatTimeAMPM(schedule.class_start)
-          )}
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <input
-              type="time"
-              value={editFormData.class_end || ''}
-              onChange={(e) => updateEditField('class_end', e.target.value)}
-              className={`${styles.editInput} ${validationErrors.class_end ? styles.errorInput : ''}`}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            formatTimeAMPM(schedule.class_end)
-          )}
-        </td>
-        
-        <td>
-          {isEditing ? (
-            <div className={styles.graceInputContainer}>
-              <input
-                type="number"
-                min="0"
-                max="120"
-                step="5"
-                value={editFormData.grace_period_minutes || '15'}
-                onChange={(e) => updateEditField('grace_period_minutes', e.target.value)}
-                className={`${styles.editInput} ${styles.graceInput} ${validationErrors.grace_period_minutes ? styles.errorInput : ''}`}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className={styles.graceUnit}>minutes</span>
-            </div>
-          ) : (
-            formatDuration(schedule.grace_period_minutes || 15)
-          )}
-        </td>
-        
-        <td>
-          {renderEditCell(schedule)}
-        </td>
-        
-        <td>
-          <div className={styles.icon}>
-            <FontAwesomeIcon 
-              icon={faTrashCan} 
-              className="action-button"
-              onClick={(e) => handleDeleteClick(schedule, e)}
-            />
+            <span className={styles.graceUnit}>minutes</span>
           </div>
-        </td>
-      </tr>
-    );
-  };
+        );
+      }
+    },
+    {
+      key: 'edit',
+      label: 'EDIT',
+      headerStyle: withColumnWidth('10%', 70),
+      cellStyle: withColumnWidth('10%', 70),
+      renderCell: ({ row }) => renderEditCell(row)
+    },
+    {
+      key: 'delete',
+      label: 'DELETE',
+      headerStyle: withColumnWidth('10%', 70),
+      cellStyle: withColumnWidth('10%', 70),
+      renderCell: ({ row }) => (
+        <div className={styles.icon}>
+          <FontAwesomeIcon 
+            icon={faTrashCan}
+            className="action-button"
+            onClick={(e) => handleDeleteClick(row, e)}
+          />
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className={styles.scheduleTableContainer} ref={tableRef}>
-      <div className={styles.tableInfo}>
-        <p>{getTableInfoMessage()}</p>
-      </div>
+      <Table
+        columns={columns}
+        rows={filteredSchedules}
+        getRowId={(row) => row.id}
+        loading={loading}
+        error={error ? `Error: ${error}` : ''}
+        emptyMessage={getTableInfoMessage()}
+        containerRef={tableRef}
+        tableLabel="Grade schedule records"
+        onRowClick={({ row }) => toggleRow(row.id)}
+        isRowSelected={({ row }) => selectedSchedules.includes(row.id)}
+        rowClassName={({ row }) => {
+          const isEditing = editingId === row.id;
+          return `${styles.scheduleRow} ${isEditing ? styles.editingRow : ''}`;
+        }}
+        expandedRowId={expandedRow}
+        renderExpandedRow={({ row }) => renderExpandedRow(row)}
+        persistExpandedRows
+        hideMainRowWhenExpanded
+        getExpandedRowClassName={({ isExpanded }) => `${styles.expandRow} ${isExpanded ? styles.expandRowActive : ''}`}
+        stickyHeader
+        wrapperClassName={styles.tableWrapper}
+      />
 
-      <div className={styles.tableWrapper}>
-        <table>
-          <thead>
-            <tr>
-              <th>
-                <div className={styles.icon} onClick={handleSelectAll}>
-                  <FontAwesomeIcon 
-                    icon={allVisibleSelected ? fasCircle : farCircleRegular} 
-                    style={{ 
-                      cursor: 'pointer',
-                      color: allVisibleSelected ? '#007bff' : '' 
-                    }}
-                  />
-                </div>
-              </th>
-              <th>GRADE LEVEL</th>
-              <th>CLASS START</th>
-              <th>CLASS END</th>
-              <th>GRACE PERIOD</th>
-              <th>EDIT</th>
-              <th>DELETE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredSchedules.length === 0 ? (
-              <tr>
-                <td colSpan="7" className={styles.noSchedule}>
-                  {getTableInfoMessage()}
-                </td>
-              </tr>
-            ) : (
-              filteredSchedules.map((schedule, index) => {
-                const visibleRowIndex = filteredSchedules
-                  .slice(0, index)
-                  .filter(s => !isRowExpanded(s.id))
-                  .length;
-                
-                const rowColorClass = visibleRowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd;
-                const isSelected = selectedSchedules.includes(schedule.id);
-
-                return (
-                  <React.Fragment key={schedule.id}>
-                    {!isRowExpanded(schedule.id) && (
-                      renderRegularRow(schedule, rowColorClass, visibleRowIndex, isSelected)
-                    )}
-                    {renderExpandedRow(schedule)}
-                    {editingId === schedule.id && Object.keys(validationErrors).length > 0 && (
-                      <tr className={styles.errorRow}>
-                        <td colSpan="7" className={styles.errorMessages}>
-                          {Object.values(validationErrors).map((error, idx) => (
-                            <div key={idx} className={styles.errorMessage}>
-                              {error}
-                            </div>
-                          ))}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {Object.keys(validationErrors).length > 0 && (
+        <div className={styles.tableInfo}>
+          <p className={styles.errorMessage}>{Object.values(validationErrors)[0]}</p>
+        </div>
+      )}
 
       <DeleteEntityModal
         isOpen={isDeleteModalOpen}

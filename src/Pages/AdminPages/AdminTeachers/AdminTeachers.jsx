@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import styles from './AdminTeachers.module.css';
-import PageLabel from "../../../Components/UI/Labels/PageLabel/PageLabel.jsx";
 import TeacherTable from '../../../Components/Tables/TeacherTable/TeacherTable.jsx';
 import SectionLabel from "../../../Components/UI/Labels/SectionLabel/SectionLabel.jsx";
 import Input from '../../../Components/UI/Input/Input.jsx';
@@ -15,6 +14,9 @@ import { useTeachers } from '../../../Components/Hooks/useEntities.js';
 import { TeacherService } from '../../../Utils/EntityService.js'; 
 import { useToast } from '../../../Components/Toast/ToastContext/ToastContext.jsx'; 
 import { useAuth } from '../../../Components/Authentication/AuthProvider/AuthProvider';
+import { exportEntity } from '../../../Utils/exportEntity.js';
+import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
 
 function AdminTeachers() {
   const { success, error: toastError } = useToast();
@@ -248,6 +250,62 @@ function AdminTeachers() {
     }
   };
 
+  const formatGradeSectionDisplay = (sectionEntry) => {
+    if (!sectionEntry?.section) return "";
+
+    const gradeLevel = sectionEntry.section.grade?.grade_level;
+    const sectionName = sectionEntry.section.section_name;
+
+    if (!gradeLevel || !sectionName) return "";
+
+    return `${gradeLevel} - ${sectionName}`;
+  };
+
+  const handleExportTeachers = async () => {
+    try {
+      const teachersWithAssignments = await Promise.all(
+        teachers.map(async (teacher) => {
+          const assignments = await teacherService.getTeacherAssignments(teacher.id);
+
+          const subjects = [...new Set((assignments.subjects || [])
+            .map((entry) => String(entry?.subject?.subject_code || "").trim())
+            .filter(Boolean))];
+
+          const gradeSectionsTeaching = [...new Set((assignments.assignments || [])
+            .map((entry) => {
+              const gradeLevel = entry?.section?.grade?.grade_level;
+              const sectionName = entry?.section?.section_name;
+
+              if (!gradeLevel || !sectionName) return "";
+
+              return `${gradeLevel} - ${sectionName}`;
+            })
+            .filter(Boolean))];
+
+          const adviserGradeSection = formatGradeSectionDisplay(
+            (assignments.sections || []).find((entry) => entry?.is_adviser)
+          );
+
+          return {
+            ...teacher,
+            subjects,
+            grade_sections_teaching: gradeSectionsTeaching,
+            adviser_grade_section: adviserGradeSection,
+          };
+        })
+      );
+
+      exportEntity({
+        entity: "teacher",
+        data: teachersWithAssignments,
+        filename: "teacher-export",
+      });
+      success("Successfully downloaded teacher data table");
+    } catch (err) {
+      toastError("Failed to export teacher data: " + err.message);
+    }
+  };
+
   const deleteSingleTeacherAPI = async (teacherId) => {
     try {
       const response = await fetch('http://localhost:5000/api/teacher-invite/delete-teacher', {
@@ -343,28 +401,37 @@ function AdminTeachers() {
 
   return (
     <main className={styles.main}>
-      <PageLabel icon={<FontAwesomeIcon icon={faChalkboardUser} />} label="Teachers"></PageLabel>
       <SectionLabel label="Teacher Records"></SectionLabel>
       
       <div className={styles.top}>
-        <div className={styles.searchAndFilter}>
-          <Input 
-            placeholder="Search Teacher Record" 
-            value={searchTerm}
-            onChange={handleSearchChange}
-            search="true"
+        <div className={styles.topLeft}>
+          <Button 
+            color="coolGray" 
+            height="sm"
+            width="auto"
+            label="Export" 
+            icon={<DownloadIcon/>}
+            onClick={handleExportTeachers}
+            disabled={teachers.length === 0}
+          />
+          <Button 
+            color="coolGray" 
+            height="sm"
+            width="auto"
+            label="Import" 
+            icon={<UploadIcon/>}
+            onClick={() => setIsUploadModalOpen(true)}
           />
           
           {selectedTeachers.length > 0 && (
             <div className={styles.bulkActions}>
               <Button
-                color="primary"
+                color="warmStone"
                 height="sm"
                 width="auto"
                 icon={<ForwardToInboxIcon/>}
                 onClick={handleBulkInviteClick}
                 disabled={isSendingInvite}
-                style={{ marginRight: '10px' }}
               />
               <Button
                 color="danger"
@@ -378,14 +445,19 @@ function AdminTeachers() {
           )}
         </div>
         
-        <div className={styles.addButtons}>
+        <div className={styles.topRight}>
+          <Input 
+            placeholder="Search Teacher Record" 
+            value={searchTerm}
+            onChange={handleSearchChange}
+            search="true"
+          />
           <Button 
-            color="success" 
+            color="ocean" 
             height="sm" 
             width="md" 
-            label="Add Teachers" 
+            label="+ New Teacher" 
             onClick={() => setIsUploadModalOpen(true)}
-            style={{ marginRight: '10px' }}
           />
         </div>
       </div>

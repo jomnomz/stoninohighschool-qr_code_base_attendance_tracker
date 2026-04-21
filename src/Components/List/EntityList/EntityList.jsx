@@ -1,18 +1,18 @@
 import React from 'react';
-import { 
+import {
   formatGradeSection,
   formatStudentDisplayName,
   formatTeacherDisplayName,
-} from '../../../Utils/Formatters'; 
+} from '../../../Utils/Formatters';
 import styles from './EntityList.module.css';
 
-function EntityList({ 
-  entities = [], 
-  maxHeight = "100px",
-  title = "Entities included",
+function EntityList({
+  entities = [],
+  maxHeight = '100px',
+  title = 'Entities included',
   showNumbers = true,
   variant = 'multiple',
-  entityType = 'student' 
+  entityType = 'student'
 }) {
   if (entities.length === 0) {
     return null;
@@ -20,15 +20,15 @@ function EntityList({
 
   const formatGradeSectionDisplay = (gradeSection) => {
     if (!gradeSection) return '';
-    
+
     if (typeof gradeSection === 'string') {
       return gradeSection;
     }
-    
+
     const grade = gradeSection.grade || gradeSection.grade_level || '';
     const section = gradeSection.section || gradeSection.section_name || '';
     const room = gradeSection.room;
-    
+
     let display = '';
     if (grade && section) {
       display = `Grade ${grade} - ${section}`;
@@ -37,71 +37,77 @@ function EntityList({
     } else if (section) {
       display = section;
     }
-    
+
     if (room && room !== 'N/A' && room !== '') {
       display += ` (Room ${room})`;
     }
-    
+
     return display;
   };
 
   const formatSubjectDisplay = (subject) => {
     if (!subject) return '';
-    
+
     if (typeof subject === 'string') {
       return subject;
     }
-    
+
     const code = subject.subject_code || subject.code || '';
     const name = subject.subject_name || subject.name || subject.displayName || '';
-    
+
     if (code && name) {
       return `${code} - ${name}`;
-    } else if (code) {
+    }
+    if (code) {
       return code;
-    } else if (name) {
+    }
+    if (name) {
       return name;
     }
-    
+
     return '';
   };
 
   const formatGradeScheduleDisplay = (schedule) => {
     if (!schedule) return '';
-    
+
     if (typeof schedule === 'string') {
       return schedule;
     }
-    
+
     const grade = schedule.grade || schedule.grade_level || '';
     const startTime = schedule.class_start || '';
     const endTime = schedule.class_end || '';
     const gracePeriod = schedule.grace_period_minutes || 15;
-    
+
     let display = '';
     if (grade) {
       display = `Grade ${grade}`;
     }
-    
+
     if (startTime && endTime) {
       const formatTime = (timeStr) => {
         if (!timeStr) return '';
         const [hours, minutes] = timeStr.split(':');
-        const hour = parseInt(hours);
+        const hour = parseInt(hours, 10);
         const period = hour >= 12 ? 'PM' : 'AM';
         const displayHour = hour % 12 || 12;
         return `${displayHour}:${minutes} ${period}`;
       };
-      
+
       display += ` (${formatTime(startTime)} - ${formatTime(endTime)})`;
     }
-    
+
     if (gracePeriod !== undefined && gracePeriod !== null) {
       display += ` • ${gracePeriod} min grace`;
     }
-    
+
     return display;
   };
+
+  const normalizedEntityType = String(entityType).toLowerCase();
+  const isGradeSectionType = ['gradesection', 'grade section', 'section', 'grade sections', 'gradesections'].includes(normalizedEntityType);
+  const isGradeScheduleType = ['gradeschedule', 'grade schedule', 'schedule', 'grade schedules', 'gradeschedules'].includes(normalizedEntityType);
 
   const formatEntityDetails = (entity) => {
     switch (entityType) {
@@ -111,51 +117,55 @@ function EntityList({
           name: formatStudentDisplayName(entity),
           details: formatGradeSection(entity)
         };
-      
+
       case 'teacher':
         return {
           identifier: entity.employee_id || '',
           name: formatTeacherDisplayName(entity),
           details: entity.email_address || 'NA'
         };
-      
+
       case 'subject':
         return {
           identifier: entity.subject_code || entity.code || '',
           name: entity.subject_name || entity.name || '',
           details: formatSubjectDisplay(entity)
         };
-      
+
       case 'gradeSection':
       case 'section':
+      case 'grade section':
+      case 'grade sections':
         return {
           identifier: `${entity.grade || entity.grade_level || ''}-${entity.section || entity.section_name || ''}`,
           name: formatGradeSectionDisplay(entity),
           details: entity.room && entity.room !== 'N/A' ? `Room ${entity.room}` : ''
         };
-      
+
       case 'grade':
         return {
           identifier: `Grade ${entity.grade_level || entity.grade || ''}`,
           name: `Grade ${entity.grade_level || entity.grade || ''}`,
           details: entity.description || ''
         };
-      
+
       case 'gradeSchedule':
       case 'schedule':
+      case 'grade schedule':
+      case 'grade schedules':
         return {
           identifier: `Grade ${entity.grade || entity.grade_level || ''} Schedule`,
           name: formatGradeScheduleDisplay(entity),
           details: entity.grace_period_minutes ? `${entity.grace_period_minutes} min grace period` : ''
         };
-      
+
       case 'room':
         return {
           identifier: entity.room_number || entity.name || '',
           name: entity.name || entity.room_number || '',
           details: entity.description || entity.building || ''
         };
-      
+
       default:
         if (entity.lrn) {
           return {
@@ -163,98 +173,102 @@ function EntityList({
             name: formatStudentDisplayName(entity),
             details: formatGradeSection(entity)
           };
-        } else if (entity.employee_id) {
+        }
+        if (entity.employee_id) {
           return {
             identifier: entity.employee_id || '',
             name: formatTeacherDisplayName(entity),
             details: entity.email_address || 'NA'
           };
-        } else if (entity.subject_code) {
+        }
+        if (entity.subject_code) {
           return {
             identifier: entity.subject_code || '',
             name: entity.subject_name || '',
             details: formatSubjectDisplay(entity)
           };
-        } else if (entity.grade || entity.grade_level) {
+        }
+        if (entity.grade || entity.grade_level) {
           if (entity.section || entity.section_name) {
             return {
               identifier: `${entity.grade || entity.grade_level || ''}-${entity.section || entity.section_name || ''}`,
               name: formatGradeSectionDisplay(entity),
               details: entity.room && entity.room !== 'N/A' ? `Room ${entity.room}` : ''
             };
-          } else if (entity.class_start || entity.class_end) {
+          }
+          if (entity.class_start || entity.class_end) {
             return {
               identifier: `Grade ${entity.grade || entity.grade_level || ''} Schedule`,
               name: formatGradeScheduleDisplay(entity),
               details: entity.grace_period_minutes ? `${entity.grace_period_minutes} min grace period` : ''
             };
-          } else {
-            return {
-              identifier: `Grade ${entity.grade_level || entity.grade || ''}`,
-              name: `Grade ${entity.grade_level || entity.grade || ''}`,
-              details: entity.description || ''
-            };
           }
-        } else {
-          return { 
-            identifier: entity.id || entity.code || '',
-            name: entity.name || entity.title || entity.displayName || 'Unnamed Entity',
-            details: entity.description || entity.email || entity.info || ''
+          return {
+            identifier: `Grade ${entity.grade_level || entity.grade || ''}`,
+            name: `Grade ${entity.grade_level || entity.grade || ''}`,
+            details: entity.description || ''
           };
         }
+        return {
+          identifier: entity.id || entity.code || '',
+          name: entity.name || entity.title || entity.displayName || 'Unnamed Entity',
+          details: entity.description || entity.email || entity.info || ''
+        };
     }
   };
 
   const getTitle = () => {
     const entityTypeText = {
       student: 'Student',
-      teacher: 'Teacher', 
+      teacher: 'Teacher',
       subject: 'Subject',
       gradeSection: 'Grade Section',
       section: 'Section',
       grade: 'Grade',
       gradeSchedule: 'Grade Schedule',
       schedule: 'Schedule',
-      room: 'Room'
-    }[entityType] || 'Entity';
-    
+      room: 'Room',
+      'grade section': 'Grade Section',
+      'grade schedule': 'Grade Schedule',
+      'grade sections': 'Grade Section',
+      'grade schedules': 'Grade Schedule',
+    }[entityType] || (isGradeSectionType ? 'Grade Section' : isGradeScheduleType ? 'Grade Schedule' : 'Entity');
+
     return `${title} (${entities.length} ${entityTypeText}${entities.length !== 1 ? 's' : ''}):`;
   };
 
   const getEntityDisplayText = (details) => {
-    switch (entityType) {
-      case 'student':
-        return `${details.identifier} | ${details.name} | ${details.details}`;
-      
-      case 'teacher':
-        return `${details.identifier} | ${details.name} | ${details.details}`;
-      
-      case 'subject':
-        return details.details || `${details.identifier} - ${details.name}`;
-      
-      case 'gradeSection':
-      case 'section':
-        return details.name;
-      
-      case 'grade':
-        return details.name;
-      
-      case 'gradeSchedule':
-      case 'schedule':
-        return details.name;
-      
-      case 'room':
-        return `${details.identifier}${details.details ? ` - ${details.details}` : ''}`;
-      
-      default:
-        if (details.identifier && details.name) {
-          return details.details 
-            ? `${details.identifier} | ${details.name} | ${details.details}`
-            : `${details.identifier} | ${details.name}`;
-        } else {
-          return details.name || details.identifier || 'Unknown Entity';
-        }
+    if (entityType === 'student') {
+      return `${details.identifier} | ${details.name} | ${details.details}`;
     }
+
+    if (entityType === 'teacher') {
+      return `${details.identifier} | ${details.name} | ${details.details}`;
+    }
+
+    if (entityType === 'subject') {
+      return details.details || `${details.identifier} - ${details.name}`;
+    }
+
+    if (entityType === 'gradeSection' || entityType === 'section' || isGradeSectionType) {
+      return details.name;
+    }
+
+    if (entityType === 'grade' || entityType === 'gradeSchedule' || entityType === 'schedule' || isGradeScheduleType) {
+      return details.name;
+    }
+
+    if (entityType === 'room') {
+      return `${details.identifier}${details.details ? ` - ${details.details}` : ''}`;
+    }
+
+    if (details.identifier && details.name) {
+      return details.details
+        ? `${details.identifier} | ${details.name} | ${details.details}`
+        : `${details.identifier} | ${details.name}`;
+    }
+
+    return details.name || details.identifier || 'Unknown Entity';
   };
 
   if (variant === 'single' && entities.length === 1) {

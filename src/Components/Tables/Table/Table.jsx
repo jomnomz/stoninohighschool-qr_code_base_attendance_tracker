@@ -1,7 +1,8 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useRef } from 'react';
 import styles from './Table.module.css';
 
 const joinClassNames = (...classNames) => classNames.filter(Boolean).join(' ');
+const ICON_COLUMN_KEYS = new Set(['select', 'qr_code', 'delete']);
 
 const getValue = (valueOrFactory, context) => {
 	if (typeof valueOrFactory === 'function') {
@@ -14,29 +15,30 @@ const getValue = (valueOrFactory, context) => {
 function Table({
 	columns = [],
 	rows = [],
-	getRowId = (row, index) => row?.id ?? index,
+	getRowId = (row) => row?.id,
 	loading = false,
 	error = '',
+	// emptyMessage is rendered only for empty states; use infoText for dynamic counts/status text.
 	emptyMessage = 'No data found',
 	containerRef = null,
 	gradeTabs = null,
 	infoText = '',
+	selectedInfoText = '',
 	headerContent = null,
 	footerContent = null,
 	renderTopContent = null,
 	tableLabel = '',
 	onRowClick = null,
 	rowClassName = null,
+	isRowSelected = null,
 	expandedRowId = null,
 	renderExpandedRow = null,
-	expandedRowColSpan = null,
 	persistExpandedRows = false,
 	hideMainRowWhenExpanded = false,
 	getExpandedRowClassName = null,
 	getRowProps = null,
 	striped = true,
-	stickyHeader = false,
-	noDataColSpan = null,
+	stickyHeader = true,
 	className = '',
 	tableClassName = '',
 	wrapperClassName = '',
@@ -44,8 +46,22 @@ function Table({
 	bodyClassName = '',
 	rowKeyPrefix = 'table-row'
 }) {
-	const resolvedEmptyColSpan = noDataColSpan || columns.length || 1;
-	const resolvedExpandedColSpan = expandedRowColSpan || columns.length || 1;
+	const warnedIndexFallbackRef = useRef(false);
+	const warnedEmptyMessageUsageRef = useRef(false);
+	const resolvedEmptyColSpan = columns.length || 1;
+	const resolvedExpandedColSpan = columns.length || 1;
+	const isDev = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+	const looksLikeDynamicStatusText =
+		typeof emptyMessage === 'string' &&
+		/(showing|found|across|matching|\d+\s*(student|teacher|record|item))/i.test(emptyMessage);
+
+	if (isDev && rows.length > 0 && looksLikeDynamicStatusText && !warnedEmptyMessageUsageRef.current) {
+		warnedEmptyMessageUsageRef.current = true;
+		console.warn(
+			'[Table] emptyMessage should be reserved for empty states only. ' +
+			'Use infoText for dynamic status/count text when rows are present.'
+		);
+	}
 
 	const renderGradeTabs = () => {
 		if (!gradeTabs?.options?.length || !gradeTabs.onChange) {
@@ -138,21 +154,42 @@ function Table({
 		}
 
 		return rows.map((row, rowIndex) => {
-			const rowId = getRowId(row, rowIndex);
+			const providedRowId = getRowId(row, rowIndex);
+			const hasStableRowId = providedRowId !== undefined && providedRowId !== null && providedRowId !== '';
+			const rowId = hasStableRowId ? providedRowId : rowIndex;
+
+			if (!hasStableRowId && isDev && !warnedIndexFallbackRef.current) {
+				warnedIndexFallbackRef.current = true;
+				console.warn(
+					`[Table] Missing stable row id. Falling back to row index for keys in "${tableLabel || rowKeyPrefix}". ` +
+					'Provide a stable getRowId to avoid key instability during sorting/filtering.'
+				);
+			}
+
 			const isExpanded = expandedRowId !== null && expandedRowId === rowId;
+			const isSelected = Boolean(
+				getValue(isRowSelected, {
+					row,
+					rowIndex,
+					rowId,
+					isExpanded
+				})
+			);
 			const computedRowClassName = getValue(rowClassName, {
 				row,
 				rowIndex,
 				rowId,
 				isExpanded
 			});
+			const rowStripeClassName = striped ? (rowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd) : '';
 			const extraRowProps = getRowProps?.({ row, rowIndex, rowId, isExpanded }) || {};
 			const mainRow = (
 				<tr
 					{...extraRowProps}
 					className={joinClassNames(
 						styles.row,
-						striped && rowIndex % 2 === 0 ? styles.rowEven : styles.rowOdd,
+						rowStripeClassName,
+						isSelected && styles.rowSelected,
 						isExpanded && styles.rowExpanded,
 						onRowClick && styles.rowClickable,
 						computedRowClassName,
@@ -161,6 +198,7 @@ function Table({
 					onClick={onRowClick ? (event) => onRowClick({ row, rowIndex, rowId, event }) : extraRowProps.onClick}
 				>
 					{columns.map((column, columnIndex) => {
+						const isIconColumn = ICON_COLUMN_KEYS.has(column?.key);
 						const cellClassName = getValue(column.cellClassName, {
 							row,
 							rowIndex,
@@ -169,12 +207,15 @@ function Table({
 							rowId,
 							isExpanded
 						});
+						const cellStyle = isIconColumn
+							? { ...column.cellStyle, width: '56px', minWidth: '56px', maxWidth: '56px' }
+							: column.cellStyle;
 
 						return (
 							<td
 								key={column.key || `${rowId}-cell-${columnIndex}`}
-								className={joinClassNames(styles.cell, cellClassName)}
-								style={column.cellStyle}
+								className={joinClassNames(styles.cell, isIconColumn && styles.iconColumnCell, cellClassName)}
+								style={cellStyle}
 							>
 								{renderCellContent(column, row, rowIndex)}
 							</td>
@@ -208,16 +249,17 @@ function Table({
 
 	return (
 		<div className={joinClassNames(styles.container, className)} ref={containerRef}>
-			{(renderTopContent || gradeTabs || infoText || headerContent) && (
+			{(renderTopContent || gradeTabs || infoText || selectedInfoText || headerContent) && (
 				<div className={styles.topBar}>
 					<div className={styles.topBarLeft}>
 						{renderTopContent}
 						{renderGradeTabs()}
 					</div>
 
-					{(infoText || headerContent) && (
+					{(infoText || selectedInfoText || headerContent) && (
 						<div className={styles.topBarRight}>
 							{infoText && <div className={styles.infoText}>{infoText}</div>}
+							{selectedInfoText && <div className={styles.selectedInfoText}>{selectedInfoText}</div>}
 							{headerContent}
 						</div>
 					)}
@@ -238,12 +280,22 @@ function Table({
 							<tr>
 								{columns.map((column, columnIndex) => {
 									const headerClassName = getValue(column.headerClassName, { column, columnIndex });
+									const isIconColumn = ICON_COLUMN_KEYS.has(column?.key);
+									const shouldFixHeaderIconWidth = column?.key === 'select';
+									const headerStyle = shouldFixHeaderIconWidth
+										? {
+											...(column.headerStyle || column.cellStyle),
+											width: '56px',
+											minWidth: '56px',
+											maxWidth: '56px'
+										}
+										: (column.headerStyle || column.cellStyle);
 
 									return (
 										<th
 											key={column.key || `header-${columnIndex}`}
-											className={joinClassNames(styles.headerCell, headerClassName)}
-											style={column.headerStyle || column.cellStyle}
+											className={joinClassNames(styles.headerCell, shouldFixHeaderIconWidth && styles.iconColumnHeader, headerClassName)}
+											style={headerStyle}
 											scope="col"
 										>
 											{renderHeaderCell(column, columnIndex)}

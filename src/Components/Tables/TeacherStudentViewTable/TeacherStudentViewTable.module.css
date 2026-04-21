@@ -2,6 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+   --table-content-width: 98%;
 }
 
 .searchContainer {
@@ -30,7 +31,7 @@
 }
 
 .tableWrapper {
-  max-height: 59vh;
+  max-height: 66vh;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -101,26 +102,7 @@
   transform: scale(1.1);
 }
 
-.rowEven {
-  background-color: white !important;
-}
 
-.rowOdd {
-  background-color: #f2f2f2 !important;
-}
-
-.studentRow:hover {
-  background-color: #8a8a8a !important;
-  cursor: pointer;
-}
-
-.studentRow:hover td {
-  color: white;
-}
-
-.studentRow:hover .reportButton {
-  color: white;
-}
 
 .loading, .error, .noStudents {
   text-align: center;
@@ -281,7 +263,10 @@
 .searchRow {
   display: flex;
   gap: 10px;
-  align-items: center;
+  margin-right: 30px;
+  flex-direction: row;
+  justify-content: end;
+  align-items: center
 }
 
 

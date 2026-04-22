@@ -138,6 +138,10 @@ function DeleteEntityModal({
             `Are you sure you want to delete this ${labels.sentenceSingular}?`
           )}
         </MessageModalLabel>
+
+        <InfoBox type="warning">
+          <strong>Warning:</strong> {getWarningMessage()}
+        </InfoBox>
         
         {config.hasAccountField && getStatusMessage() && (
           <InfoBox type="important">
@@ -151,10 +155,6 @@ function DeleteEntityModal({
           title={`${deleteCount > 1 ? labels.titlePlural : labels.titleSingular} to be deleted`}
           entityType={labels.listEntityType}
         />
-
-        <InfoBox type="warning">
-          <strong>Warning:</strong> {getWarningMessage()}
-        </InfoBox>
 
         <div className={styles.buttonGroup}>
           <Button

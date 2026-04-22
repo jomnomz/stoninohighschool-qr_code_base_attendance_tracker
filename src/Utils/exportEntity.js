@@ -56,6 +56,25 @@ const createSheetFromRows = (headers, rows) => {
   const worksheetData = [headers, ...rows];
   const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
   worksheet['!cols'] = autoSizeColumns(headers, rows);
+
+  // Force LRN and phone columns to be text (for student export)
+  const lrnCol = headers.findIndex(h => h.toLowerCase().includes('lrn'));
+  const phoneCols = headers
+    .map((h, idx) => (h.toLowerCase().includes('phone') ? idx : -1))
+    .filter(idx => idx !== -1);
+
+  // Start from row 2 (skip header)
+  for (let r = 1; r < worksheetData.length; r++) {
+    if (lrnCol !== -1) {
+      const cellRef = XLSX.utils.encode_cell({ c: lrnCol, r });
+      if (worksheet[cellRef]) worksheet[cellRef].t = 's';
+    }
+    for (const c of phoneCols) {
+      const cellRef = XLSX.utils.encode_cell({ c, r });
+      if (worksheet[cellRef]) worksheet[cellRef].t = 's';
+    }
+  }
+
   return worksheet;
 };
 

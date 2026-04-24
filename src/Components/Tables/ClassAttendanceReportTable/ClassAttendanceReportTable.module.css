@@ -1,0 +1,12 @@
+.modalTableScroll {
+  max-height: 65vh;
+  min-height: 200px;
+  overflow-y: auto;
+}
+.attendanceTableRow {
+  background: #f9fafb;
+  transition: background 0.2s;
+}
+.attendanceTableRow:hover {
+  background: #e6f4f1;
+}

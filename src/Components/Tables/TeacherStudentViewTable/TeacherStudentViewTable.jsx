@@ -3,14 +3,15 @@ import { formatStudentName, formatNA } from '../../../Utils/Formatters';
 import { sortEntities } from '../../../Utils/SortEntities';
 import styles from './TeacherStudentViewTable.module.css';
 import { supabase } from '../../../lib/supabase';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faImage } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import { faImage } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../Authentication/AuthProvider/AuthProvider';
 import { useRowExpansion } from '../../Hooks/useRowExpansion';
 import Input from '../../UI/Input/Input';
 import Button from '../../UI/Buttons/Button/Button';
 import ReportGenerationModal from '../../Modals/ReportGenerationModal/ReportGenerationModal';
-import StudentReportModal from '../../Modals/StudentReportModal/StudentReportModal';
+import ClassAttendanceReportModal from '../../Modals/ClassAttendanceReportModal/ClassAttendanceReportModal';
+// import StudentReportModal from '../../Modals/StudentReportModal/StudentReportModal';
 import Table from '../Table/Table.jsx';
 
 const TeacherStudentViewTable = () => {
@@ -23,8 +24,9 @@ const TeacherStudentViewTable = () => {
   const { user } = useAuth();
   
   const [showReportGeneration, setShowReportGeneration] = useState(false);
-  const [showStudentReport, setShowStudentReport] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  // const [showStudentReport, setShowStudentReport] = useState(false);
+  // const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showClassAttendanceReport, setShowClassAttendanceReport] = useState(false); // Placeholder for class attendance report modal
   
   const { expandedRow, tableRef, toggleRow } = useRowExpansion();
   const classTabStorageKey = useMemo(() => {
@@ -302,11 +304,11 @@ const TeacherStudentViewTable = () => {
     );
   }, [sortedStudents, searchTerm]);
 
-  const handleViewReport = (student, e) => {
-    e.stopPropagation();
-    setSelectedStudent(student);
-    setShowStudentReport(true);
-  };
+  // const handleViewReport = (student, e) => {
+  //   e.stopPropagation();
+  //   setSelectedStudent(student);
+  //   setShowStudentReport(true);
+  // };
 
   const handleClassChange = (className) => {
     setCurrentClass(className);
@@ -396,24 +398,25 @@ const TeacherStudentViewTable = () => {
       headerStyle: withColumnWidth('35%', 180),
       cellStyle: withColumnWidth('35%', 180),
       renderCell: ({ row }) => formatNA(row.email)
-    },
-    {
-      key: 'reports',
-      label: 'REPORTS',
-      headerStyle: withColumnWidth('10%', 80),
-      cellStyle: withColumnWidth('10%', 80),
-      renderCell: ({ row }) => (
-        <div className={styles.reportButtonContainer}>
-          <button 
-            className={styles.reportButton}
-            onClick={(e) => handleViewReport(row, e)}
-            title="View attendance reports"
-          >
-            <FontAwesomeIcon icon={faImage} />
-          </button>
-        </div>
-      )
     }
+    // Reports column commented out
+    // ,{
+    //   key: 'reports',
+    //   label: 'REPORTS',
+    //   headerStyle: withColumnWidth('10%', 80),
+    //   cellStyle: withColumnWidth('10%', 80),
+    //   renderCell: ({ row }) => (
+    //     <div className={styles.reportButtonContainer}>
+    //       <button 
+    //         className={styles.reportButton}
+    //         onClick={(e) => handleViewReport(row, e)}
+    //         title="View attendance reports"
+    //       >
+    //         <FontAwesomeIcon icon={faImage} />
+    //       </button>
+    //     </div>
+    //   )
+    // }
   ], []);
 
   if (loading && students.length === 0) {
@@ -481,13 +484,21 @@ const TeacherStudentViewTable = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             search={true}
           />
-          <Button
+          {/* <Button
             label="Mark Valid Days"
             onClick={() => setShowReportGeneration(true)}
             color="ocean"
             height="sm"
             width="auto"
             title="Configure school days and attendance reports"
+          /> */}
+          <Button
+            label="Class Attendance Report"
+            onClick={() => setShowClassAttendanceReport(true)}
+            color="ocean"
+            height="sm"
+            width="auto"
+            title="Show class attendance report"
           />
         </div>
       </div>
@@ -530,12 +541,19 @@ const TeacherStudentViewTable = () => {
         currentClass={currentClass}
       />
 
+      <ClassAttendanceReportModal
+        isOpen={showClassAttendanceReport}
+        onClose={() => setShowClassAttendanceReport(false)}
+        currentClass={currentClass}
+      />
+      {/*
       <StudentReportModal
         isOpen={showStudentReport}
         onClose={() => setShowStudentReport(false)}
         student={selectedStudent}
         currentClass={currentClass}
       />
+      */}
     </div>
   );
 };

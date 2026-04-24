@@ -1,3 +1,68 @@
+// Export Class Attendance Report to Excel
+export function exportClassAttendanceReportToExcel({
+  attendanceRows = [],
+  selectedMonth,
+  year,
+  className
+}) {
+  if (!attendanceRows || attendanceRows.length === 0) {
+    throw new Error('No attendance data to export');
+  }
+
+  // Parse className (e.g. "9-Quezon" or "9 Quezon")
+  let grade = '', section = '';
+  if (typeof className === 'string') {
+    const match = className.match(/^(\d+)[-\s](.+)$/);
+    if (match) {
+      grade = match[1];
+      section = match[2];
+    }
+  } else if (className && className.grade && className.section) {
+    grade = className.grade;
+    section = className.section;
+  }
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const monthName = monthNames[selectedMonth] || '';
+  const headerTitle = `${monthName} ${year} | Grade ${grade} - Section ${section}`;
+
+  // Prepare worksheet data
+  const headers = [
+    'Student Name',
+    'School Days',
+    'Present',
+    'Late',
+    'Absent',
+    'Attendance Rate'
+  ];
+  const rows = attendanceRows.map(row => [
+    row.name,
+    row.schoolDays,
+    row.present,
+    row.late,
+    row.absent,
+    row.attendanceRate
+  ]);
+
+  // Insert the custom header/title row at the top
+  const worksheetData = [[headerTitle], headers, ...rows];
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
+  ];
+  worksheet['!cols'] = headers.map((header, i) => ({ wch: Math.max(header.length + 2, 16) }));
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Report');
+
+  // Filename: April_2026_Grade9_Quezon.xlsx
+  const safeSection = (section || '').replace(/\s+/g, '');
+  const filename = `${monthName}_${year}_Grade${grade}_${safeSection}.xlsx`;
+  XLSX.writeFile(workbook, filename);
+}
 import * as XLSX from 'xlsx';
 
 const STUDENT_HEADERS = [

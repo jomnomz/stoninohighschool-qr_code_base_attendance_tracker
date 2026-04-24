@@ -105,6 +105,7 @@
 
 .tableWrapper {
 	overflow-x: auto;
+	overflow-y: auto;
 	border-radius: 12px;
 	background: #ffffff;
 	border: 1px solid #d8e1ec;
